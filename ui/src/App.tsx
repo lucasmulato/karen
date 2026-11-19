@@ -5,10 +5,10 @@ import GraphView, {
 } from './components/GraphView';
 import {
   Brain,
+  CircleHelp,
   Download,
   Plus,
   Search,
-  Settings,
   Upload,
   MessageSquare,
   Link2,
@@ -21,6 +21,9 @@ import ChatPanel from './components/ChatPanel';
 import LeadsPanel from './components/LeadsPanel';
 import CommandPanel from './components/CommandPanel';
 import HealthStrip from './components/HealthStrip';
+import WorkspacePane from './components/WorkspacePane';
+import Dialog from './components/Dialog';
+import GraphSearch from './components/GraphSearch';
 
 const NotesPanel = React.lazy(() => import('./components/NotesPanel'));
 
@@ -72,6 +75,8 @@ const App: React.FC = () => {
   const [showLeads, setShowLeads] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [paneWidth, setPaneWidth] = useState<number>(() => {
     const saved = Number(localStorage.getItem('karen-pane-width'));
     return Number.isFinite(saved) && saved >= 25 && saved <= 75 ? saved : 50;
@@ -97,6 +102,29 @@ const App: React.FC = () => {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+      if (e.key === 'Escape') {
+        setShowHelp(false);
+        setShowSearch(false);
+        setShowAdd(false);
+        setConnect(null);
+        setShowChat(false);
+        setShowLeads(false);
+        setShowCommands(false);
+        setShowNotes(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   async function exportCanvas() {
     try {
@@ -233,6 +261,11 @@ const App: React.FC = () => {
       return;
     }
 
+    // One focus area at a time: a node selection closes any open tool pane.
+    setShowChat(false);
+    setShowLeads(false);
+    setShowCommands(false);
+    setShowNotes(false);
     setSelectedNode({
       id: node.id,
       name: node.name,
@@ -290,10 +323,10 @@ const App: React.FC = () => {
   const connectBannerText = !connect
     ? ''
     : !connect.source
-      ? 'Connect: click the source node'
+      ? 'Conectar: clique no nó de origem'
       : !connect.label
-        ? 'Connect: choose a relationship label'
-        : 'Connect: click the target node';
+        ? 'Conectar: escolha o relacionamento'
+        : 'Conectar: clique no nó de destino';
 
   return (
     <div className="flex h-screen w-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
@@ -302,14 +335,18 @@ const App: React.FC = () => {
         <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-500/20">
           <Brain size={24} className="text-white" />
         </div>
-        <div className="flex flex-col gap-6">
-          <button className="p-2 text-zinc-500 hover:text-white transition-colors">
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => setShowSearch((v) => !v)}
+            className={`p-2 transition-colors ${showSearch ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'}`}
+            title="Buscar nós"
+          >
             <Search size={24} />
           </button>
           <button
-            onClick={() => setShowAdd((v) => !v)}
+            onClick={() => setShowAdd(true)}
             className="p-2 text-zinc-500 hover:text-white transition-colors"
-            title="Add node"
+            title="Adicionar nó"
           >
             <Plus size={24} />
           </button>
@@ -318,16 +355,22 @@ const App: React.FC = () => {
             className={`p-2 transition-colors ${
               connect ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
             }`}
-            title="Connect two nodes"
+            title="Conectar nós"
           >
             <Link2 size={24} />
           </button>
+        </div>
+
+        <div className="my-1 h-px w-8 bg-zinc-800" />
+
+        <div className="flex flex-col gap-2">
           <button
             onClick={() => {
               setShowChat((v) => !v);
               setShowLeads(false);
               setShowCommands(false);
               setShowNotes(false);
+              setSidebarOpen(false);
             }}
             className={`p-2 transition-colors ${
               showChat ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
@@ -342,6 +385,7 @@ const App: React.FC = () => {
               setShowChat(false);
               setShowCommands(false);
               setShowNotes(false);
+              setSidebarOpen(false);
             }}
             className={`p-2 transition-colors ${
               showLeads ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
@@ -356,6 +400,7 @@ const App: React.FC = () => {
               setShowChat(false);
               setShowLeads(false);
               setShowNotes(false);
+              setSidebarOpen(false);
             }}
             className={`p-2 transition-colors ${
               showCommands ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
@@ -370,6 +415,7 @@ const App: React.FC = () => {
               setShowChat(false);
               setShowLeads(false);
               setShowCommands(false);
+              setSidebarOpen(false);
             }}
             className={`p-2 transition-colors ${
               showNotes ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
@@ -380,8 +426,12 @@ const App: React.FC = () => {
           </button>
         </div>
         <div className="mt-auto">
-          <button className="p-2 text-zinc-500 hover:text-white transition-colors">
-            <Settings size={24} />
+          <button
+            onClick={() => setShowHelp((v) => !v)}
+            className={`p-2 transition-colors ${showHelp ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'}`}
+            title="Ajuda"
+          >
+            <CircleHelp size={24} />
           </button>
         </div>
       </nav>
@@ -422,16 +472,46 @@ const App: React.FC = () => {
               />
             </label>
           </div>
+
+          {showSearch && (
+            <GraphSearch
+              onClose={() => setShowSearch(false)}
+              onSelect={(row) =>
+                handleNodeClick({
+                  id: row.id,
+                  name: row.name,
+                  type: row.type,
+                  description: row.description ?? null,
+                  properties: {},
+                })
+              }
+            />
+          )}
+
+          {showHelp && (
+            <div className="pointer-events-auto absolute right-6 top-16 w-64 rounded-xl border border-zinc-800 bg-black/95 p-4 text-xs text-zinc-400 shadow-2xl">
+              <p className="mb-2 font-semibold text-zinc-200">Atalhos</p>
+              <ul className="space-y-1 text-[11px]">
+                <li><kbd className="text-blue-400">/</kbd> — buscar nós</li>
+                <li><kbd className="text-blue-400">Esc</kbd> — fechar diálogo ou painel</li>
+                <li>Arraste a barra lateral para redimensionar o painel</li>
+              </ul>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="mt-3 w-full rounded-lg border border-zinc-700 py-1.5 text-[11px] hover:border-blue-500"
+              >
+                Fechar
+              </button>
+            </div>
+          )}
         </header>
 
-        {showAdd && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-full max-w-md bg-black/90 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-lg font-semibold mb-4">Add New Node</h2>
+        <Dialog open={showAdd} title="Adicionar nó" onClose={() => setShowAdd(false)}>
             <form onSubmit={handleAddNode} className="flex flex-col gap-3">
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="Name"
+                placeholder="Nome"
                 className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
               />
@@ -440,23 +520,23 @@ const App: React.FC = () => {
                 onChange={(e) => setNewType(e.target.value as any)}
                 className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="idea">Idea</option>
-                <option value="project">Project</option>
-                <option value="task">Task</option>
-                <option value="label">Label</option>
-                <option value="note">Note</option>
-                <option value="finding">Finding</option>
-                <option value="technique">Technique</option>
+                <option value="idea">Ideia</option>
+                <option value="project">Projeto</option>
+                <option value="task">Tarefa</option>
+                <option value="label">Rótulo</option>
+                <option value="note">Nota</option>
+                <option value="finding">Achado</option>
+                <option value="technique">Técnica</option>
                 <option value="cve">CVE</option>
-                <option value="tool">Tool</option>
+                <option value="tool">Ferramenta</option>
                 <option value="writeup">Writeup</option>
-                <option value="target">Target</option>
-                <option value="fix">Fix</option>
+                <option value="target">Alvo</option>
+                <option value="fix">Correção</option>
               </select>
               <textarea
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                placeholder="Description (optional)"
+                placeholder="Descrição (opcional)"
                 rows={2}
                 className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
@@ -466,40 +546,27 @@ const App: React.FC = () => {
                   onClick={() => setShowAdd(false)}
                   className="px-4 py-2 text-sm rounded-lg hover:bg-zinc-800 transition-colors"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={adding || !newName.trim()}
                   className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-colors"
                 >
-                  {adding ? 'Adding...' : 'Add Node'}
+                  {adding ? 'Adicionando...' : 'Adicionar'}
                 </button>
               </div>
             </form>
-          </div>
-        )}
+        </Dialog>
 
-        {connect && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-full max-w-md bg-black/90 backdrop-blur-xl border border-zinc-800 rounded-2xl p-5 shadow-2xl">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide">
-                {connectBannerText}
-              </h2>
-              <button
-                onClick={() => setConnect(null)}
-                className="p-1 hover:bg-zinc-800 rounded-md"
-                title="Cancel connect mode"
-              >
-                <X size={16} className="text-zinc-400" />
-              </button>
-            </div>
-            {!connect.label && connect.source && (
+        <Dialog open={connect !== null} title="Conectar nós" onClose={() => setConnect(null)}>
+            <p className="mb-3 text-xs text-zinc-400">{connectBannerText}</p>
+            {!connect?.label && connect?.source && (
               <div className="grid grid-cols-2 gap-2">
                 {EDGE_LABELS.map((label) => (
                   <button
                     key={label}
-                    onClick={() => setConnect({ source: connect.source, label })}
+                    onClick={() => setConnect({ source: connect!.source, label })}
                     className="px-3 py-2 text-xs rounded-lg border border-zinc-700 hover:border-blue-500 hover:bg-zinc-900 transition-colors"
                   >
                     {label}
@@ -507,15 +574,12 @@ const App: React.FC = () => {
                 ))}
               </div>
             )}
-            {connect.source && connect.label && (
+            {connect?.source && connect?.label && (
               <p className="text-xs text-zinc-400">
-                Source selected. Now click a target node on the graph.
+                Origem selecionada. Agora clique no nó de destino no grafo.
               </p>
             )}
-          </div>
-        )}
-
-        {showLeads && <LeadsPanel onClose={() => setShowLeads(false)} />}
+        </Dialog>
 
         <GraphView
           data={data}
@@ -526,7 +590,7 @@ const App: React.FC = () => {
         />
         </div>
 
-        {(showChat || showCommands || showNotes) && (
+        {(showChat || showCommands || showNotes || showLeads) && (
           <div
             role="separator"
             aria-orientation="vertical"
@@ -546,28 +610,51 @@ const App: React.FC = () => {
           />
         )}
 
-        {showChat && (
+        {(showChat || showLeads || showCommands || showNotes) && (
           <aside className="w-full md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 md:border-l-0 bg-black">
-            <ChatPanel
-              onClose={() => setShowChat(false)}
-              onGraphChanged={refresh}
-            />
-          </aside>
-        )}
+            {showChat && (
+              <WorkspacePane
+                title="KAREN"
+                subtitle="Chat com o second brain"
+                onClose={() => setShowChat(false)}
+              >
+                <ChatPanel onGraphChanged={refresh} />
+              </WorkspacePane>
+            )}
 
-        {showCommands && (
-          <aside className="w-full md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 md:border-l-0 bg-black">
-            <CommandPanel onClose={() => setShowCommands(false)} />
-          </aside>
-        )}
+            {showLeads && (
+              <WorkspacePane
+                title="Leads"
+                subtitle="OpenStreetMap · mensagens prontas para copiar"
+                onClose={() => setShowLeads(false)}
+              >
+                <LeadsPanel />
+              </WorkspacePane>
+            )}
 
-        {showNotes && (
-          <aside className="w-full md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 md:border-l-0 bg-black">
-            <React.Suspense
-              fallback={<div className="flex h-full items-center justify-center text-xs text-zinc-500">Carregando notas...</div>}
-            >
-              <NotesPanel onClose={() => setShowNotes(false)} />
-            </React.Suspense>
+            {showCommands && (
+              <WorkspacePane
+                title="Comandos"
+                subtitle="Leitura automática · mudanças exigem aprovação"
+                onClose={() => setShowCommands(false)}
+              >
+                <CommandPanel />
+              </WorkspacePane>
+            )}
+
+            {showNotes && (
+              <WorkspacePane
+                title="Notas"
+                subtitle="Vault Markdown · jardim · canvas"
+                onClose={() => setShowNotes(false)}
+              >
+                <React.Suspense
+                  fallback={<div className="flex h-full items-center justify-center text-xs text-zinc-500">Carregando notas...</div>}
+                >
+                  <NotesPanel />
+                </React.Suspense>
+              </WorkspacePane>
+            )}
           </aside>
         )}
       </main>
@@ -590,13 +677,13 @@ const App: React.FC = () => {
           <div>
             <h2 className="text-2xl font-semibold mb-2">{selectedNode.name}</h2>
             <p className="text-zinc-400 leading-relaxed text-sm">
-              {selectedNode.description || 'No description provided.'}
+              {selectedNode.description || 'Sem descrição.'}
             </p>
           </div>
 
           <div className="flex flex-col gap-4 mt-4">
             <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">
-              Properties
+              Propriedades
             </div>
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
@@ -606,7 +693,7 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800">
-                <div className="text-zinc-500 mb-1">Created</div>
+                <div className="text-zinc-500 mb-1">Criado</div>
                 <div className="text-zinc-300">
                   {selectedNode.created_at
                     ? new Date(selectedNode.created_at).toLocaleDateString()
@@ -618,7 +705,7 @@ const App: React.FC = () => {
 
           <div className="mt-auto pt-6 border-t border-zinc-900">
             <button className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-medium transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98]">
-              Edit Node
+              Editar nó
             </button>
           </div>
         </aside>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, ChevronDown, RefreshCw, Terminal, X, XCircle } from 'lucide-react';
+import { Check, ChevronDown, RefreshCw, XCircle } from 'lucide-react';
 
 interface Definition {
   id: string;
@@ -34,7 +34,7 @@ const STATUS_STYLE: Record<string, string> = {
   denied: 'text-zinc-500 border-zinc-700',
 };
 
-const CommandPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const CommandPanel: React.FC = () => {
   const [definitions, setDefinitions] = useState<Definition[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -126,26 +126,12 @@ const CommandPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const write = definitions.filter((d) => d.risk === 'write');
 
   return (
-    <div className="flex h-full w-full flex-col bg-black">
-      <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-5 py-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-blue-400">
-            <Terminal size={15} /> KAREN · Comandos
-          </h2>
-          <p className="text-[11px] text-zinc-500">
-            Leitura automática · mudanças exigem aprovação
-          </p>
-        </div>
-        <div className="flex items-center gap-1">
-          <button onClick={refresh} className="p-1 text-zinc-500 hover:text-blue-400" title="Atualizar">
-            <RefreshCw size={15} />
-          </button>
-          <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded-md" title="Fechar">
-            <X size={16} className="text-zinc-400" />
-          </button>
-        </div>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 justify-end border-b border-zinc-900 px-5 py-1.5">
+        <button onClick={refresh} className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-blue-400" title="Atualizar">
+          <RefreshCw size={12} /> Atualizar
+        </button>
       </div>
-
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5">
         {error && (
           <div className="text-xs text-red-300 bg-red-950/40 border border-red-800/50 rounded-lg p-2">

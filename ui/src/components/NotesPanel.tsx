@@ -3,7 +3,7 @@ import MDEditor from '@uiw/react-md-editor';
 import CanvasView from './CanvasView';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
-import { FileText, FolderOpen, Leaf, Network, Save, X } from 'lucide-react';
+import { FileText, FolderOpen, Leaf, Network, Save } from 'lucide-react';
 
 interface GardenNote {
   id: string;
@@ -35,7 +35,7 @@ function slug(name: string): string {
     .slice(0, 80) || 'nota';
 }
 
-const NotesPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const NotesPanel: React.FC = () => {
   const [tab, setTab] = useState<Tab>('files');
   const [files, setFiles] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -209,9 +209,6 @@ const NotesPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <Save size={12} /> {saving ? 'Salvando...' : 'Salvar'}
             </button>
           )}
-          <button onClick={onClose} className="p-1 text-zinc-500 hover:text-white" title="Fechar">
-            <X size={16} />
-          </button>
         </div>
       </div>
 

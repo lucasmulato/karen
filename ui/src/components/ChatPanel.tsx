@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -7,7 +6,6 @@ interface ChatMessage {
 }
 
 interface ChatPanelProps {
-  onClose: () => void;
   /** Called when the agent mutated the graph so the UI can refetch. */
   onGraphChanged?: () => void;
 }
@@ -22,7 +20,7 @@ const QUICK_PROMPTS = [
   { label: 'Memória', text: 'O que você lembra sobre mim?' },
 ];
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ onGraphChanged }) => {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -61,7 +59,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
         {
           role: 'assistant',
           content:
-            'Sorry, the request failed. Is the chat feature configured on the API?',
+            'A requisição falhou. Verifique se o modelo local e a API estão ativos.',
         },
       ]);
     } finally {
@@ -78,26 +76,12 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
   }
 
   return (
-    <div className="flex h-full w-full flex-col bg-black">
-      <div className="flex shrink-0 items-center justify-between px-5 py-3 border-b border-zinc-800">
-        <h2 className="text-sm font-semibold uppercase tracking-wide">
-          KAREN
-        </h2>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-zinc-800 rounded-md"
-          title="Close chat"
-        >
-          <X size={16} className="text-zinc-400" />
-        </button>
-      </div>
-
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
         {configured === false && (
           <div className="text-xs text-zinc-400 bg-zinc-900/70 border border-zinc-800 rounded-lg p-3">
-            Chat is disabled. Ask the API operator to set{' '}
-            <code className="text-zinc-200">LLM_API_KEY</code> (a free Groq key
-            from groq.com works) and restart the gateway.
+            Chat desativado. Verifique se o modelo local está rodando e se o
+            ambiente da API tem <code className="text-zinc-200">LLM_API_KEY</code>.
           </div>
         )}
         {messages.map((msg, i) => (
@@ -114,7 +98,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
         ))}
         {busy && (
           <div className="self-start bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-500">
-            Thinking...
+            Pensando...
           </div>
         )}
         <div ref={bottomRef} />
@@ -139,7 +123,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={
-            configured ? 'Ask me to add or find nodes...' : 'Chat disabled'
+            configured ? 'Pergunte à KAREN...' : 'Chat desativado'
           }
           disabled={configured !== true || busy}
           className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
@@ -149,7 +133,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
           disabled={configured !== true || busy || !input.trim()}
           className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-colors"
         >
-          Send
+          Enviar
         </button>
       </form>
     </div>

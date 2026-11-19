@@ -127,6 +127,9 @@ For the configured local stack (llama.cpp + PostgreSQL + API), run
 - **Connect Nodes**: Click the link icon in the sidebar, pick source node →
   relationship label → target node to create an edge.
 - **Persistent Layout**: Drag nodes into place — positions survive reloads.
+- **Unified workspace**: Chat, Leads, Commands and Notes share one docked,
+  resizable pane; Add/Connect use modal dialogs. Clicking a node closes the pane
+  and shows the detail sidebar. `Esc` closes, `/` opens graph search.
 - **Health strip + quick prompts**: The header shows live API / KAREN / DB / TLS
   status from `GET /api/health/full`, and the chat has one-click prompt chips
   for status, garden report, lead search and memory.

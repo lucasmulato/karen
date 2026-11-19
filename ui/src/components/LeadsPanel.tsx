@@ -9,7 +9,6 @@ import {
   Phone,
   Search,
   Star,
-  X,
 } from 'lucide-react';
 
 interface Draft {
@@ -93,7 +92,7 @@ function toCsv(leads: Lead[]): string {
   return rows.join('\n');
 }
 
-const LeadsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const LeadsPanel: React.FC = () => {
   const [status, setStatus] = useState<Status | null>(null);
   const [query, setQuery] = useState(DEFAULTS.query);
   const [location, setLocation] = useState(DEFAULTS.location);
@@ -234,21 +233,7 @@ const LeadsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   }
 
   return (
-    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-full max-w-3xl bg-black/95 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-7rem)]">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 shrink-0">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-blue-400">
-            KAREN · Leads
-          </h2>
-          <p className="text-[11px] text-zinc-500">
-            OpenStreetMap → mensagens prontas para copiar · telefones podem ser preenchidos manualmente
-          </p>
-        </div>
-        <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded-md" title="Fechar">
-          <X size={16} className="text-zinc-400" />
-        </button>
-      </div>
-
+    <div className="flex min-h-0 flex-1 flex-col">
       <form onSubmit={run} className="px-5 py-4 border-b border-zinc-800 flex flex-col gap-3 shrink-0">
         {status && !status.configured && (
           <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/50 rounded-lg p-2">
