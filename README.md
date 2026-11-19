@@ -220,6 +220,19 @@ The env file is `/home/admin/models/karen.env` (mode 600, outside the repo).
 Only `/api/*` is proxied; the MCP stdio surface stays local. A scrape can take
 minutes, so the button shows a spinner while the browser waits.
 
+### Persistent memory (markdown vault)
+
+KAREN keeps durable facts outside the repo at `KAREN_VAULT_DIR`
+(default `/home/admin/models/karen-vault`), so private notes are never committed.
+Structure follows kepano's vault layout (`00 Inbox` … `40 Archive`) plus
+`decisions/`, `people/`, `projects/` and `MEMORY.md`.
+
+- `MEMORY.md` is injected into every chat as persistent context.
+- The agent uses `remember` (append-only, idempotent) for durable facts and
+  `read_note` / `write_note` for other markdown notes. Paths are strictly
+  allowlisted — no traversal, `.md` only, 60 KB cap.
+- Read via `GET /api/notes` and `GET /api/notes/content?path=MEMORY.md`.
+
 ### Second-brain sources (all free / MIT)
 
 KAREN's note conventions and graph portability draw on public work, credited

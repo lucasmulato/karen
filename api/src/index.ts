@@ -14,6 +14,7 @@ import { leadProviderFromEnv } from "./services/providers.js";
 import { LeadService } from "./services/leads.js";
 import { CommandService } from "./services/commands.js";
 import { CanvasService } from "./services/canvas.js";
+import { VaultFsService } from "./services/vaultfs.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -41,6 +42,7 @@ const vault = new VaultService(client, embeddings);
 // the endpoints return a clear 503 instead of failing at request time.
 const commands = new CommandService(client);
 const canvas = new CanvasService(client, vault);
+const notes = new VaultFsService();
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -53,7 +55,7 @@ const leads = new LeadService(client, leadProvider, {
 
 // Optional reasoning layer: only constructed when LLM_API_KEY is set.
 const agent = chatConfigFromEnv()
-  ? new GraphAgent(chatConfigFromEnv()!, vault, leads, commands)
+  ? new GraphAgent(chatConfigFromEnv()!, vault, leads, commands, notes)
   : null;
 
 // 3. MCP Server Setup
@@ -558,6 +560,22 @@ async function handleHttp(
       return;
     }
 
+    // --- Markdown vault / persistent memory ----------------------------------
+    if (req.method === "GET" && path === "/api/notes") {
+      sendJson(res, 200, { root: notes.root, files: await notes.list() });
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/notes/content") {
+      const notePath = url.searchParams.get("path") ?? "";
+      try {
+        sendJson(res, 200, { path: notePath, content: await notes.read(notePath) });
+      } catch (err: any) {
+        sendJson(res, 400, { error: err.message });
+      }
+      return;
+    }
+
     // --- JSON Canvas portability ---------------------------------------------
     if (req.method === "GET" && path === "/api/graph/canvas") {
       const data = await canvas.export();
@@ -689,6 +707,7 @@ async function handleHttp(
 // 7. Start Server
 async function main() {
   await connectDb();
+  await notes.ensureStructure();
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

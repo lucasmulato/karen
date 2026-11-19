@@ -3,6 +3,7 @@ import type { VaultService } from "./vault.js";
 import { NODE_TYPES, EDGE_LABELS } from "./vault.js";
 import type { LeadService } from "./leads.js";
 import type { CommandService } from "./commands.js";
+import type { VaultFsService } from "./vaultfs.js";
 
 /**
  * Cyber second-brain reasoning layer.
@@ -211,6 +212,56 @@ const TOOLS = [
       parameters: { type: "object", properties: {} },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "read_note",
+      description:
+        "Ler uma nota Markdown do vault da KAREN (ex: 'MEMORY.md', 'people/Joao.md'). Use para recuperar memória persistente.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "Caminho relativo no vault" },
+        },
+        required: ["path"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "write_note",
+      description:
+        "Criar ou atualizar uma nota Markdown no vault. NÃO use para MEMORY.md — use remember(). Caminhos permitidos: 00 Inbox/, 10 Projects/, 20 Areas/, 30 Resources/, 40 Archive/, decisions/, people/, projects/.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string" },
+          content: { type: "string" },
+        },
+        required: ["path", "content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "remember",
+      description:
+        "Registra um fato durável em MEMORY.md de forma segura (append-only). Use em vez de write_note para memória.",
+      parameters: {
+        type: "object",
+        properties: {
+          section: {
+            type: "string",
+            enum: ["Operador", "Decisões", "Projetos ativos", "Notas de longo prazo"],
+          },
+          content: { type: "string", description: "Fato curto, uma linha" },
+        },
+        required: ["section", "content"],
+      },
+    },
+  },
 ];
 
 export interface ChatResult {
@@ -223,13 +274,18 @@ export class GraphAgent {
     private readonly config: ChatConfig,
     private readonly vault: VaultService,
     private readonly leads?: LeadService | null,
-    private readonly commands?: CommandService | null
+    private readonly commands?: CommandService | null,
+    private readonly notes?: VaultFsService | null
   ) {}
 
   async chat(message: string): Promise<ChatResult> {
     const context = await this.vault.contextForQuestion(message);
+    const memory = this.notes ? await this.notes.memory() : "";
     const environment = [
       "AMBIENTE — SynapseVault, seu second brain de segurança.",
+      memory
+        ? `MEMÓRIA PERSISTENTE (MEMORY.md). Use como fonte e atualize com read_note/write_note quando aprender algo durável:\n${memory}`
+        : "Sem memória persistente carregada.",
       context
         ? `Contexto recuperado do grafo (use como fonte, cite quando relevante):\n${context}`
         : "Nenhum contexto prévio encontrado no grafo para esta pergunta.",
@@ -387,6 +443,23 @@ export class GraphAgent {
         } catch {
           return "Notas atômicas, uma ideia por nota, links explícitos e maturity seedling → budding → evergreen.";
         }
+      }
+      case "read_note": {
+        if (!this.notes) throw new Error("Vault de notas não disponível.");
+        return await this.notes.read(String(args.path ?? ""));
+      }
+      case "write_note": {
+        if (!this.notes) throw new Error("Vault de notas não disponível.");
+        const path = String(args.path ?? "");
+        const content = String(args.content ?? "");
+        await this.notes.write(path, content);
+        return JSON.stringify({ saved: path, bytes: Buffer.byteLength(content, "utf8") });
+      }
+      case "remember": {
+        if (!this.notes) throw new Error("Vault de notas não disponível.");
+        const section = String(args.section ?? "Notas de longo prazo");
+        await this.notes.appendMemory(section, String(args.content ?? ""));
+        return JSON.stringify({ remembered: section });
       }
       default:
         throw new Error(`Unknown tool: ${call.function.name}`);
