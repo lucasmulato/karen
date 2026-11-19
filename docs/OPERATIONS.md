@@ -39,8 +39,9 @@ the database from the chosen dump, then restart and check `/api/health/full`.
 ## Offsite backup
 
 Encrypted copies of the newest dump + vault archive are pushed daily (04:00) to
-a **private** git repo `karen-backups` via SSH. The timer is
-`karen-offsite.timer`; run manually with
+a **private** git repo `karen-backups` via SSH. The local clone is
+`/home/admin/karen-backups` (`KAREN_OFFSITE_DIR`) and the remote is in
+`KAREN_OFFSITE_REPO`. The timer is `karen-offsite.timer`; run manually with
 `sudo systemctl start karen-offsite.service`.
 
 The AES-256 passphrase is `KAREN_BACKUP_PASSPHRASE` in the env file **and must be
