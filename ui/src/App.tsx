@@ -20,6 +20,7 @@ import {
 import ChatPanel from './components/ChatPanel';
 import LeadsPanel from './components/LeadsPanel';
 import CommandPanel from './components/CommandPanel';
+import HealthStrip from './components/HealthStrip';
 
 const NotesPanel = React.lazy(() => import('./components/NotesPanel'));
 
@@ -398,6 +399,9 @@ const App: React.FC = () => {
               KAREN <span className="text-zinc-600 px-2">//</span>{' '}
               <span className="text-blue-400">Cyber &amp; Leads</span>
             </h1>
+            <span className="hidden lg:block">
+              <HealthStrip />
+            </span>
             <button
               onClick={exportCanvas}
               className="text-zinc-500 hover:text-blue-400 transition-colors"

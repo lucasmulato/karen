@@ -127,6 +127,9 @@ For the configured local stack (llama.cpp + PostgreSQL + API), run
 - **Connect Nodes**: Click the link icon in the sidebar, pick source node →
   relationship label → target node to create an edge.
 - **Persistent Layout**: Drag nodes into place — positions survive reloads.
+- **Health strip + quick prompts**: The header shows live API / KAREN / DB / TLS
+  status from `GET /api/health/full`, and the chat has one-click prompt chips
+  for status, garden report, lead search and memory.
 - **Chat (optional)**: The chat button talks to **KAREN**, the combined cyber +
   lead-gen persona in `api/prompts/karen.md`. It searches the graph in hybrid
   mode (keyword + vectors) and compiles a token-budgeted context before

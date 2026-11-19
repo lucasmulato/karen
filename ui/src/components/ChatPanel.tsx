@@ -15,6 +15,13 @@ interface ChatPanelProps {
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
+const QUICK_PROMPTS = [
+  { label: 'Status', text: 'Use service_status e me diga se os serviços estão ok' },
+  { label: 'Jardim', text: 'Use garden_report e me diga quantas notas estão órfãs' },
+  { label: 'Leads', text: 'busca restaurantes sem site em Guarulhos, máximo 5 lugares' },
+  { label: 'Memória', text: 'O que você lembra sobre mim?' },
+];
+
 const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -33,11 +40,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, busy]);
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault();
-    const text = input.trim();
+  async function submit(text: string) {
     if (!text || busy) return;
-    setInput('');
     setMessages((m) => [...m, { role: 'user', content: text }]);
     setBusy(true);
     try {
@@ -63,6 +67,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
     } finally {
       setBusy(false);
     }
+  }
+
+  function send(e: React.FormEvent) {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text || busy) return;
+    setInput('');
+    void submit(text);
   }
 
   return (
@@ -106,6 +118,20 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
           </div>
         )}
         <div ref={bottomRef} />
+      </div>
+
+      <div className="flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1">
+        {QUICK_PROMPTS.map((p) => (
+          <button
+            key={p.label}
+            onClick={() => submit(p.text)}
+            disabled={busy || configured !== true}
+            title={p.text}
+            className="shrink-0 rounded-full border border-zinc-700 px-2.5 py-1 text-[10px] text-zinc-400 hover:border-blue-500 hover:text-blue-400 disabled:opacity-40"
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
 
       <form onSubmit={send} className="flex shrink-0 gap-2 px-4 py-3 border-t border-zinc-800">

@@ -7,6 +7,7 @@ import {
 import { Client } from "pg";
 import { z } from "zod";
 import http from "node:http";
+import { connect as tlsConnect } from "node:tls";
 import { VaultService, NODE_TYPES, EDGE_LABELS } from "./services/vault.js";
 import { GraphAgent, chatConfigFromEnv } from "./services/agent.js";
 import { EmbeddingService, embeddingConfigFromEnv } from "./services/embeddings.js";
@@ -409,6 +410,56 @@ async function handleHttp(
   try {
     if (req.method === "GET" && path === "/api/health") {
       sendJson(res, 200, { status: "ok" });
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/health/full") {
+      const checks: Record<string, unknown> = { api: "ok" };
+      try {
+        await client.query("SELECT 1");
+        checks.db = "ok";
+      } catch {
+        checks.db = "error";
+      }
+      try {
+        const r = await fetch("http://127.0.0.1:8080/health", {
+          signal: AbortSignal.timeout(3000),
+        });
+        checks.llama = r.ok ? "ok" : "error";
+      } catch {
+        checks.llama = "error";
+      }
+      try {
+        // Inspect the certificate actually served, without needing root access
+        // to /etc/letsencrypt/live.
+        const host =
+          process.env.KAREN_PUBLIC_HOST ?? "karen.164.68.109.252.sslip.io";
+        checks.cert = await new Promise((resolve) => {
+          const socket = tlsConnect(
+            { host, port: 443, servername: host, rejectUnauthorized: false },
+            () => {
+              const cert = socket.getPeerCertificate();
+              const days = cert.valid_to
+                ? Math.floor((Date.parse(cert.valid_to) - Date.now()) / 86_400_000)
+                : undefined;
+              resolve({
+                status: days !== undefined && days > 0 ? "ok" : "error",
+                days,
+                expires: cert.valid_to,
+              });
+              socket.end();
+            }
+          );
+          socket.setTimeout(4000, () => {
+            socket.destroy();
+            resolve({ status: "unknown" });
+          });
+          socket.on("error", () => resolve({ status: "unknown" }));
+        });
+      } catch {
+        checks.cert = { status: "unknown" };
+      }
+      sendJson(res, 200, checks);
       return;
     }
 
