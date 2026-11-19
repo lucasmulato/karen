@@ -42,6 +42,11 @@ async function main() {
   try { envText = await readFile(ENV_FILE, "utf8"); } catch { /* ignore */ }
   let report = null;
   try { report = JSON.parse(await readFile(REPORT, "utf8")); } catch { /* ignore */ }
+  let mode = "karen";
+  try {
+    const modeText = await readFile("/home/admin/models/karen-vault/MODE.md", "utf8");
+    mode = /active_mode:\s*eva/i.test(modeText) ? "eva" : "karen";
+  } catch { /* ignore */ }
 
   const items = [];
   if (report?.changes?.length) {
@@ -85,7 +90,7 @@ async function main() {
       (item) =>
         `<h3>${item.title}</h3><ol>${item.steps.map((s) => `<li>${s}</li>`).join("")}</ol>`
     ),
-    "<hr><small>Alerta automático. Nenhum segredo é enviado por e-mail.</small>",
+    `<hr><small>${mode === "eva" ? "EVA — co-sócia da KAREN" : "KAREN"} · Alerta automático. Nenhum segredo é enviado por e-mail.</small>`,
   ].join("");
 
   if (DRY) {

@@ -58,7 +58,12 @@ export class VaultFsService {
       throw new Error("Somente arquivos .md são permitidos.");
     }
     const top = clean.split("/")[0];
-    if (!ALLOWED_DIRS.has(top) && clean !== "MEMORY.md" && clean !== "CONTEXT.md") {
+    if (
+      !ALLOWED_DIRS.has(top) &&
+      clean !== "MEMORY.md" &&
+      clean !== "CONTEXT.md" &&
+      clean !== "MODE.md"
+    ) {
       throw new Error(`Diretório não permitido: ${top}`);
     }
     const full = resolve(join(this.root, clean));
@@ -77,6 +82,10 @@ export class VaultFsService {
     await this.writeIfMissing(
       "CONTEXT.md",
       "# CONTEXT.md — contexto ativo da KAREN\n\nactive_context: personal\n"
+    );
+    await this.writeIfMissing(
+      "MODE.md",
+      "# MODE.md — modo ativo do assistente\n\nactive_mode: karen\n"
     );
   }
 
@@ -174,6 +183,46 @@ export class VaultFsService {
     const next = `${heading}active_context: ${clean}\n${rest ? `\n${rest}\n` : ""}`;
     await writeFile(this.safe("CONTEXT.md"), next, "utf8");
     return clean;
+  }
+
+  async activeMode(): Promise<"karen" | "eva"> {
+    try {
+      const text = await this.read("MODE.md");
+      const line = text.split("\n").find((l) => /^active_mode:/i.test(l.trim()));
+      return line?.replace(/^active_mode:\s*/i, "").trim() === "eva" ? "eva" : "karen";
+    } catch {
+      return "karen";
+    }
+  }
+
+  async setActiveMode(mode: string): Promise<"karen" | "eva"> {
+    const next = mode === "eva" ? "eva" : "karen";
+    const body = await this.read("MODE.md").catch(() => "");
+    const heading = "# MODE.md — modo ativo do assistente\n\n";
+    const rest = body.replace(heading, "").replace(/^active_mode:.*\n?/im, "").trim();
+    const text = `${heading}active_mode: ${next}\n${rest ? `\n${rest}\n` : ""}`;
+    await writeFile(this.safe("MODE.md"), text, "utf8");
+    return next;
+  }
+
+  /** Recent decision notes written by EVA. */
+  async decisions(limit = 10): Promise<{ path: string; text: string }[]> {
+    const dir = join(this.root, "decisions");
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    const files = entries
+      .filter((e) => e.isFile() && e.name.endsWith(".md"))
+      .map((e) => e.name)
+      .sort()
+      .reverse()
+      .slice(0, limit);
+    const out = [];
+    for (const name of files) {
+      out.push({
+        path: `decisions/${name}`,
+        text: (await this.read(`decisions/${name}`).catch(() => "")).slice(0, 1200),
+      });
+    }
+    return out;
   }
 
   /** Short memory block injected into the agent's context. */

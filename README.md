@@ -192,9 +192,20 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 - Hourly action alerts (`karen-alerts.timer`) for source changes, approaching deadlines and missing critical keys, with a 24h per-topic cooldown. SMTP is required for real delivery; setup steps are recorded in `api/data/email-setup-pending.md`.
 - Working contexts (`context:` frontmatter, `CONTEXT.md`, `set_context` / `get_context`) shared by the Hub, Mapa and the assistant.
 
+## EVA — co-founder mode
+
+`EVA` is a second persona for KAREN, not a second app. Toggle it in the sidebar
+(or ask `set_mode`) and the next chat uses `api/prompts/eva.md`.
+- proactive recommendations with trade-offs, cost and a single next step;
+- `decision_log` records decisions in the vault's `decisions/` folder;
+- `opportunity_score` ranks credit opportunities against KAREN's real needs;
+- the EVA board shows mode, context, opportunities and past decisions;
+- e-mails are signed by EVA while her mode is active.
+
+Mode and context live in `MODE.md` / `CONTEXT.md` inside the private vault.
+
 ## Roadmap (planned, not implemented)
 
-- **EVA** — a co-founder mode with decision logging and opportunity ranking.
 - Nightly backups (Postgres dump + vault rsync) and dependency audits.
 
 ## Sources and credits

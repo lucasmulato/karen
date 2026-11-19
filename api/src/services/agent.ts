@@ -32,11 +32,14 @@ export function chatConfigFromEnv(): ChatConfig | null {
   };
 }
 
-function loadPersona(): string {
+function loadPersona(mode: "karen" | "eva"): string {
   try {
-    return readFileSync(new URL("../../prompts/karen.md", import.meta.url), "utf8").trim();
+    const file = mode === "eva" ? "../../prompts/eva.md" : "../../prompts/karen.md";
+    return readFileSync(new URL(file, import.meta.url), "utf8").trim();
   } catch {
-    // Fallback keeps the agent usable if the prompt file was not copied.
+    if (mode === "eva") {
+      return "Você é a EVA, co-sócia da KAREN. Proponha decisões com trade-offs, custo e próximo passo. Nunca execute ações irreversíveis sem aprovação.";
+    }
     return [
       "Você é a KAREN, Especialista Sênior em Cibersegurança e assistente de",
       "aquisição para uma microagência local de sites e cardápios digitais.",
@@ -48,8 +51,6 @@ function loadPersona(): string {
     ].join("\n");
   }
 }
-
-const PERSONA = loadPersona();
 
 interface ToolCall {
   id: string;
@@ -344,6 +345,54 @@ const TOOLS = [
       parameters: { type: "object", properties: {} },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_mode",
+      description: "Retorna o modo ativo: karen (assistente) ou eva (co-sócia).",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_mode",
+      description: "Troca entre os modos KAREN e EVA quando o usuário pedir.",
+      parameters: {
+        type: "object",
+        properties: {
+          mode: { type: "string", enum: ["karen", "eva"] },
+        },
+        required: ["mode"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "decision_log",
+      description:
+        "Registra uma decisão tomada pelo operador em decisions/ no vault (data, contexto, decisão, motivo e próximo passo).",
+      parameters: {
+        type: "object",
+        properties: {
+          decision: { type: "string" },
+          reason: { type: "string" },
+          next_step: { type: "string" },
+        },
+        required: ["decision"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "opportunity_score",
+      description:
+        "Ranqueia oportunidades do relatório de créditos contra as necessidades reais da KAREN.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 ];
 
 export interface ChatResult {
@@ -365,7 +414,10 @@ export class GraphAgent {
     const context = await this.vault.contextForQuestion(message);
     const memory = this.notes ? await this.notes.memory() : "";
     const activeContext = this.notes ? await this.notes.activeContext() : "personal";
+    const mode = this.notes ? await this.notes.activeMode() : "karen";
+    const persona = loadPersona(mode);
     const environment = [
+      `MODO ATIVO: ${mode.toUpperCase()}. ${mode === "eva" ? "Você é EVA, co-sócia: traga recomendações proativas, nunca aja sozinha." : "Você é KAREN, assistente."}`,
       `CONTEXTO ATIVO DE TRABALHO: ${activeContext}. Adapte prioridades e vocabulário a ele.`,
       "AMBIENTE — SynapseVault, seu second brain de segurança.",
       memory
@@ -383,7 +435,7 @@ export class GraphAgent {
     ].join("\n");
 
     const messages: ChatMessage[] = [
-      { role: "system", content: PERSONA },
+      { role: "system", content: persona },
       { role: "system", content: environment },
       { role: "user", content: message },
     ];
@@ -629,6 +681,61 @@ export class GraphAgent {
           return `${text}\n\nPENDÊNCIA DE E-MAIL:\n${pending.slice(0, 600)}`;
         } catch {
           return text;
+        }
+      }
+      case "get_mode": {
+        return this.notes ? await this.notes.activeMode() : "karen";
+      }
+      case "set_mode": {
+        if (!this.notes) throw new Error("Vault de notas não disponível.");
+        const mode = await this.notes.setActiveMode(String(args.mode ?? "karen"));
+        return JSON.stringify({ mode, note: "A persona só muda no próximo chat." });
+      }
+      case "decision_log": {
+        if (!this.notes) throw new Error("Vault de notas não disponível.");
+        const date = new Date().toISOString().slice(0, 10);
+        const slug = String(args.decision ?? "decisao")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .slice(0, 40);
+        const path = `decisions/${date}-${slug || "decisao"}.md`;
+        const context = await this.notes.activeContext();
+        const text = [
+          `# ${String(args.decision ?? "Decisão")}`,
+          "",
+          `- Data: ${date}`,
+          `- Contexto: ${context}`,
+          `- Modo: ${await this.notes.activeMode()}`,
+          "",
+          "## Motivo",
+          String(args.reason ?? "não informado"),
+          "",
+          "## Próximo passo",
+          String(args.next_step ?? "não informado"),
+          "",
+        ].join("\n");
+        await this.notes.write(path, text);
+        return JSON.stringify({ saved: path });
+      }
+      case "opportunity_score": {
+        const path =
+          process.env.KAREN_CREDIT_JSON ??
+          "/home/admin/karen/api/data/credit-recommendations.json";
+        try {
+          const data = JSON.parse(readFileSync(path, "utf8"));
+          const gaps = (data.needs_profile ?? []).filter((n: any) => n.gap);
+          const top = (data.priorities ?? []).slice(0, 5);
+          return [
+            `Necessidades com gap: ${gaps.map((g: any) => g.id).join(", ") || "nenhuma"}`,
+            `Oportunidades ranqueadas (${data.date ?? "—"}):`,
+            ...top.map(
+              (p: any, i: number) =>
+                `${i + 1}. ${p.title} — score ${p.score} (${(p.needs ?? []).join(", ")})`
+            ),
+            "Ação humana necessária: confirmar em canal oficial antes de qualquer inscrição.",
+          ].join("\n");
+        } catch {
+          return "Relatório de créditos ainda não foi gerado.";
         }
       }
       case "key_status": {

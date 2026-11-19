@@ -51,6 +51,11 @@ async function gardenStats() {
 
 async function main() {
   const report = JSON.parse(await readFile(OUTPUT, "utf8"));
+  let mode = "karen";
+  try {
+    const modeText = await readFile("/home/admin/models/karen-vault/MODE.md", "utf8");
+    mode = /active_mode:\s*eva/i.test(modeText) ? "eva" : "karen";
+  } catch { /* ignore */ }
   const stats = await gardenStats();
   const top = report.priorities?.slice(0, 3) ?? [];
   const changes = report.changes?.length ?? 0;
@@ -72,7 +77,7 @@ async function main() {
     `<p>${stats.notes} notas no grafo · ${stats.orphans} órfãs · ${stats.stale} paradas há 30+ dias.</p>`,
     `<h2>Uma sugestão</h2>`,
     `<p>${top[0] ? `Avaliar primeiro: ${escapeHtml(top[0].title)}.` : "Nenhuma ação prioritária — dia calmo."}</p>`,
-    `<hr><small>Relatório automático e determinístico. Nenhum segredo é enviado por e-mail.</small>`,
+    `<hr><small>${mode === "eva" ? "EVA — co-sócia da KAREN" : "KAREN — seu assistente"} · Relatório determinístico. Nenhum segredo é enviado por e-mail.</small>`,
   ];
   const html = `<div style="font-family:system-ui,sans-serif;max-width:640px">${sections.join("")}</div>`;
 

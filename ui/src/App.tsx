@@ -9,6 +9,7 @@ import {
   Download,
   Plus,
   Search,
+  Sparkles,
   Upload,
   MessageSquare,
   Link2,
@@ -27,6 +28,8 @@ import Dialog from './components/Dialog';
 import GraphSearch from './components/GraphSearch';
 import ToastHost from './components/ToastHost';
 import { toast } from './toast';
+
+import EvaPanel from './components/EvaPanel';
 
 const NotesPanel = React.lazy(() => import('./components/NotesPanel'));
 
@@ -77,6 +80,7 @@ const App: React.FC = () => {
   const [showChat, setShowChat] = useState(false);
   const [showLeads, setShowLeads] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
+  const [showEva, setShowEva] = useState(false);
   const [mainView, setMainView] = useState<'notes' | 'graph'>('notes');
   const [showNoteNodes, setShowNoteNodes] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -124,6 +128,7 @@ const App: React.FC = () => {
         setShowChat(false);
         setShowLeads(false);
         setShowCommands(false);
+        setShowEva(false);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -269,6 +274,7 @@ const App: React.FC = () => {
     setShowChat(false);
     setShowLeads(false);
     setShowCommands(false);
+    setShowEva(false);
     setSelectedNode({
       id: node.id,
       name: node.name,
@@ -372,6 +378,7 @@ const App: React.FC = () => {
               setShowChat((v) => !v);
               setShowLeads(false);
               setShowCommands(false);
+              setShowEva(false);
               setSidebarOpen(false);
             }}
             className={`p-2 transition-colors ${
@@ -386,6 +393,7 @@ const App: React.FC = () => {
               setShowLeads((v) => !v);
               setShowChat(false);
               setShowCommands(false);
+              setShowEva(false);
               setSidebarOpen(false);
             }}
             className={`p-2 transition-colors ${
@@ -400,6 +408,7 @@ const App: React.FC = () => {
               setShowCommands((v) => !v);
               setShowChat(false);
               setShowLeads(false);
+              setShowEva(false);
               setSidebarOpen(false);
             }}
             className={`p-2 transition-colors ${
@@ -426,6 +435,20 @@ const App: React.FC = () => {
             title="Visão de notas"
           >
             <NotebookPen size={24} />
+          </button>
+          <button
+            onClick={() => {
+              setShowEva((v) => !v);
+              setShowChat(false);
+              setShowLeads(false);
+              setShowCommands(false);
+            }}
+            className={`p-2 transition-colors ${
+              showEva ? 'text-emerald-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
+            }`}
+            title="EVA · co-sócia"
+          >
+            <Sparkles size={24} />
           </button>
         </div>
         <div className="mt-auto">
@@ -628,7 +651,7 @@ const App: React.FC = () => {
         )}
         </div>
 
-        {(showChat || showCommands || showLeads) && (
+        {(showChat || showCommands || showLeads || showEva) && (
           <div
             role="separator"
             aria-orientation="vertical"
@@ -648,7 +671,7 @@ const App: React.FC = () => {
           />
         )}
 
-        {(showChat || showLeads || showCommands) && (
+        {(showChat || showLeads || showCommands || showEva) && (
           <aside className="w-full md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 md:border-l-0 bg-black">
             {showChat && (
               <WorkspacePane
@@ -677,6 +700,16 @@ const App: React.FC = () => {
                 onClose={() => setShowCommands(false)}
               >
                 <CommandPanel />
+              </WorkspacePane>
+            )}
+
+            {showEva && (
+              <WorkspacePane
+                title="EVA"
+                subtitle="Co-sócia · decisões e oportunidades"
+                onClose={() => setShowEva(false)}
+              >
+                <EvaPanel />
               </WorkspacePane>
             )}
 

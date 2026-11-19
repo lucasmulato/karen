@@ -8,6 +8,7 @@ import { Client } from "pg";
 import { z } from "zod";
 import http from "node:http";
 import { connect as tlsConnect } from "node:tls";
+import { readFileSync } from "node:fs";
 import { VaultService, NODE_TYPES, EDGE_LABELS } from "./services/vault.js";
 import { GraphAgent, chatConfigFromEnv } from "./services/agent.js";
 import { EmbeddingService, embeddingConfigFromEnv } from "./services/embeddings.js";
@@ -675,6 +676,47 @@ async function handleHttp(
       const tag = url.searchParams.get("tag") ?? undefined;
       const context = url.searchParams.get("context") ?? undefined;
       sendJson(res, 200, await noteLinks.graph(type, tag, context));
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/eva/mode") {
+      sendJson(res, 200, { mode: await notes.activeMode() });
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/eva/mode") {
+      const parsed = z
+        .object({ mode: z.enum(["karen", "eva"]) })
+        .safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      sendJson(res, 200, { mode: await notes.setActiveMode(parsed.data.mode) });
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/eva/board") {
+      let opportunities: unknown[] = [];
+      let reportDate: string | null = null;
+      try {
+        const report = JSON.parse(
+          readFileSync(
+            process.env.KAREN_CREDIT_JSON ??
+              "/home/admin/karen/api/data/credit-recommendations.json",
+            "utf8"
+          )
+        );
+        opportunities = (report.priorities ?? []).slice(0, 5);
+        reportDate = report.date ?? null;
+      } catch { /* ignore */ }
+      sendJson(res, 200, {
+        mode: await notes.activeMode(),
+        context: await notes.activeContext(),
+        reportDate,
+        opportunities,
+        decisions: await notes.decisions(8),
+      });
       return;
     }
 
