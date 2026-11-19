@@ -4,6 +4,7 @@ import { NODE_TYPES, EDGE_LABELS } from "./vault.js";
 import type { LeadService } from "./leads.js";
 import type { CommandService } from "./commands.js";
 import type { VaultFsService } from "./vaultfs.js";
+import type { GardenService } from "./garden.js";
 
 /**
  * Cyber second-brain reasoning layer.
@@ -262,6 +263,15 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "garden_report",
+      description:
+        "Relatório do jardim: notas órfãs, notas paradas e contagem de maturidade. Use quando o usuário perguntar sobre a saúde das notas ou o que revisar.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 ];
 
 export interface ChatResult {
@@ -275,7 +285,8 @@ export class GraphAgent {
     private readonly vault: VaultService,
     private readonly leads?: LeadService | null,
     private readonly commands?: CommandService | null,
-    private readonly notes?: VaultFsService | null
+    private readonly notes?: VaultFsService | null,
+    private readonly garden?: GardenService | null
   ) {}
 
   async chat(message: string): Promise<ChatResult> {
@@ -460,6 +471,10 @@ export class GraphAgent {
         const section = String(args.section ?? "Notas de longo prazo");
         await this.notes.appendMemory(section, String(args.content ?? ""));
         return JSON.stringify({ remembered: section });
+      }
+      case "garden_report": {
+        if (!this.garden) throw new Error("Relatório do jardim indisponível.");
+        return await this.garden.report();
       }
       default:
         throw new Error(`Unknown tool: ${call.function.name}`);

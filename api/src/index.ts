@@ -15,6 +15,7 @@ import { LeadService } from "./services/leads.js";
 import { CommandService } from "./services/commands.js";
 import { CanvasService } from "./services/canvas.js";
 import { VaultFsService } from "./services/vaultfs.js";
+import { GardenService } from "./services/garden.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -43,6 +44,7 @@ const vault = new VaultService(client, embeddings);
 const commands = new CommandService(client);
 const canvas = new CanvasService(client, vault);
 const notes = new VaultFsService();
+const garden = new GardenService(client);
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -55,7 +57,7 @@ const leads = new LeadService(client, leadProvider, {
 
 // Optional reasoning layer: only constructed when LLM_API_KEY is set.
 const agent = chatConfigFromEnv()
-  ? new GraphAgent(chatConfigFromEnv()!, vault, leads, commands, notes)
+  ? new GraphAgent(chatConfigFromEnv()!, vault, leads, commands, notes, garden)
   : null;
 
 // 3. MCP Server Setup
@@ -557,6 +559,11 @@ async function handleHttp(
         return;
       }
       sendJson(res, 200, row);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/garden/report") {
+      sendJson(res, 200, { report: await garden.report() });
       return;
     }
 

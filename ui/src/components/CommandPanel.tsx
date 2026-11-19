@@ -40,6 +40,8 @@ const CommandPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [garden, setGarden] = useState<string | null>(null);
+  const [gardenBusy, setGardenBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -100,6 +102,21 @@ const CommandPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function gardenReport() {
+    setGardenBusy(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE}/garden/report`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setGarden(data.report ?? '');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setGardenBusy(false);
     }
   }
 
@@ -196,6 +213,27 @@ const CommandPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+              Jardim de notas
+            </h3>
+            <button
+              onClick={gardenReport}
+              disabled={gardenBusy}
+              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border border-zinc-700 hover:border-emerald-600 hover:text-emerald-400 disabled:opacity-40"
+            >
+              <RefreshCw size={12} className={gardenBusy ? 'animate-spin' : ''} />
+              {gardenBusy ? 'Analisando...' : 'Gerar relatório'}
+            </button>
+          </div>
+          {garden && (
+            <pre className="whitespace-pre-wrap font-mono text-[11px] text-zinc-300 bg-black/60 rounded-lg p-3 border border-zinc-800 max-h-72 overflow-auto">
+{garden}
+            </pre>
+          )}
         </section>
 
         <section className="flex flex-col gap-2">
