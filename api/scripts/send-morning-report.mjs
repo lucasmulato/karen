@@ -5,7 +5,7 @@
  * the message. Use --dry-run to render without sending.
  */
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
 import nodemailer from "nodemailer";
 import { Client } from "pg";
 
