@@ -18,6 +18,7 @@ import { CanvasService } from "./services/canvas.js";
 import { VaultFsService } from "./services/vaultfs.js";
 import { GardenService } from "./services/garden.js";
 import { NoteLinksService } from "./services/notelinks.js";
+import { NoteGraphBridge } from "./services/notebridge.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -48,6 +49,7 @@ const canvas = new CanvasService(client, vault);
 const notes = new VaultFsService();
 const garden = new GardenService(client);
 const noteLinks = new NoteLinksService(notes);
+const noteBridge = new NoteGraphBridge(client, notes, noteLinks);
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -664,6 +666,15 @@ async function handleHttp(
       return;
     }
 
+    if (req.method === "POST" && path === "/api/notes/sync") {
+      try {
+        sendJson(res, 200, await noteBridge.syncAll());
+      } catch (err: any) {
+        sendJson(res, 500, { error: err.message });
+      }
+      return;
+    }
+
     if (req.method === "GET" && path === "/api/notes") {
       sendJson(res, 200, { root: notes.root, files: await notes.list() });
       return;
@@ -687,7 +698,13 @@ async function handleHttp(
       }
       try {
         await notes.write(parsed.data.path, parsed.data.content);
-        sendJson(res, 200, { saved: parsed.data.path });
+        let bridge: unknown = null;
+        try {
+          bridge = await noteBridge.syncPath(parsed.data.path);
+        } catch (err: any) {
+          bridge = { synced: false, reason: err.message };
+        }
+        sendJson(res, 200, { saved: parsed.data.path, bridge });
       } catch (err: any) {
         sendJson(res, 400, { error: err.message });
       }

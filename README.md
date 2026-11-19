@@ -244,7 +244,10 @@ notes and clickable `[[wikilinks]]` in read mode (with a backlinks panel).
 `GET /api/notes/graph` and `/api/notes/backlinks` parse frontmatter, `#tags` and
 wikilinks on demand from the plain markdown vault. The **Mapa** tab renders that
 note graph with D3 (same legend/tooltip/reset as the main graph), and the editor
-has `[[` autocomplete / "Inserir link".
+has `[[` autocomplete / "Inserir link". A note with `graph_id: <uuid>` in its
+frontmatter is synced into the Postgres graph by `POST /api/notes/sync`, with
+wikilinks becoming `relates_to` edges; the Propriedades panel edits type, tags,
+maturity and graph_id.
 
 See `docs/notes-ui-references.md` for the free/MIT projects evaluated.
 

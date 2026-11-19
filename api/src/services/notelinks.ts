@@ -44,7 +44,7 @@ function slug(value: string): string {
     .replace(/^-|-$/g, "");
 }
 
-function parseFrontmatter(text: string): Record<string, string> {
+export function parseFrontmatter(text: string): Record<string, string> {
   const lines = text.split("\n");
   if (lines[0]?.trim() !== "---") return {};
   const out: Record<string, string> = {};
@@ -74,7 +74,7 @@ function parseTags(text: string, frontmatter: Record<string, string>): string[] 
   return [...tags];
 }
 
-function parseLinks(text: string): string[] {
+export function parseLinks(text: string): string[] {
   const targets = new Set<string>();
   for (const match of text.matchAll(/\[\[([^\]]+)\]\]/g)) {
     const target = match[1].split("|")[0].trim();

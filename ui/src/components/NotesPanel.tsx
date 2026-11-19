@@ -28,6 +28,13 @@ interface GardenData {
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 type Tab = 'hub' | 'files' | 'mapa' | 'garden' | 'canvas';
 
+interface NoteMeta {
+  type: string;
+  tags: string[];
+  maturity: string;
+  graphId: string;
+}
+
 interface NoteNode {
   path: string;
   name: string;
@@ -61,6 +68,44 @@ function slug(name: string): string {
     .slice(0, 80) || 'nota';
 }
 
+function parseMeta(content: string): NoteMeta {
+  const lines = content.split('\n');
+  const meta: NoteMeta = { type: 'note', tags: [], maturity: 'seedling', graphId: '' };
+  if (lines[0]?.trim() !== '---') return meta;
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === '---') break;
+    const m = lines[i].match(/^([a-z_]+):\s*(.*)$/i);
+    if (!m) continue;
+    const key = m[1].toLowerCase();
+    const value = m[2].trim();
+    if (key === 'type') meta.type = value;
+    if (key === 'maturity') meta.maturity = value;
+    if (key === 'graph_id') meta.graphId = value;
+    if (key === 'tags') {
+      const inner = value.startsWith('[') ? value.slice(1, -1) : value;
+      meta.tags = inner.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean);
+    }
+  }
+  return meta;
+}
+
+function withFrontmatter(content: string, meta: NoteMeta): string {
+  const body = content.replace(/^---\n[\s\S]*?\n---\n?/, '');
+  const tags = meta.tags.filter(Boolean).map((t) => t.replace(/^#/, '')).join(', ');
+  return [
+    '---',
+    `type: ${meta.type || 'note'}`,
+    `tags: [${tags}]`,
+    `maturity: ${meta.maturity || 'seedling'}`,
+    ...(meta.graphId ? [`graph_id: ${meta.graphId}`] : []),
+    '---',
+    '',
+    body.replace(/^\n+/, ''),
+  ].join('\n');
+}
+
+const NOTE_TYPES = ['inbox', 'project', 'area', 'resource', 'archive', 'memory', 'note', 'finding', 'technique', 'cve', 'tool', 'writeup', 'target', 'fix'];
+
 const NotesPanel: React.FC = () => {
   const [tab, setTab] = useState<Tab>('hub');
   const [files, setFiles] = useState<string[]>([]);
@@ -78,6 +123,7 @@ const NotesPanel: React.FC = () => {
   const [readMode, setReadMode] = useState(false);
   const [backlinks, setBacklinks] = useState<NoteNode[]>([]);
   const [linkPicker, setLinkPicker] = useState<{ prefix: string; typing: boolean } | null>(null);
+  const [meta, setMeta] = useState<NoteMeta>({ type: 'note', tags: [], maturity: 'seedling', graphId: '' });
 
   const loadFiles = useCallback(async () => {
     try {
@@ -128,6 +174,7 @@ const NotesPanel: React.FC = () => {
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setSelected(path);
       setContent(data.content ?? '');
+      setMeta(parseMeta(data.content ?? ''));
       setDirty(false);
       setTab('files');
     } catch (err) {
@@ -135,26 +182,37 @@ const NotesPanel: React.FC = () => {
     }
   }
 
-  async function save() {
-    if (!selected || !dirty) return;
+  async function save(override?: string) {
+    if (!selected || (!dirty && override === undefined)) return;
+    const payload = override ?? content;
     setSaving(true);
     setError('');
     try {
       const res = await fetch(`${API_BASE}/notes/content`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: selected, content }),
+        body: JSON.stringify({ path: selected, content: payload }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setDirty(false);
-      toast(`Salvo: ${selected}`);
+      const synced = data.bridge?.synced;
+      toast(synced ? `Salvo e sincronizado com o grafo` : `Salvo: ${selected}`);
       await loadFiles();
+      if (tab === 'hub' || tab === 'mapa') loadGraph();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveMeta() {
+    if (!selected) return;
+    const next = withFrontmatter(content, meta);
+    setContent(next);
+    setDirty(true);
+    await save(next);
   }
 
   async function loadGarden() {
@@ -326,7 +384,7 @@ const NotesPanel: React.FC = () => {
           )}
           {tab === 'files' && !readMode && (
             <button
-              onClick={save}
+              onClick={() => save()}
               disabled={!dirty || saving}
               className="flex items-center gap-1 rounded bg-blue-600 px-2.5 py-1 text-[12px] text-white disabled:opacity-40"
             >
@@ -534,6 +592,76 @@ const NotesPanel: React.FC = () => {
                 </div>
               )}
             </div>
+            {selected && (
+              <div className="shrink-0 border-t border-zinc-800 bg-zinc-950 px-3 py-2">
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+                    Propriedades
+                  </p>
+                  <button
+                    onClick={saveMeta}
+                    className="rounded border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
+                  >
+                    Salvar propriedades
+                  </button>
+                </div>
+                {meta.tags.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1">
+                    {meta.tags.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => { setTagFilter(t); setTab('hub'); }}
+                        className="rounded-full border border-emerald-800 px-2 py-0.5 text-[10px] text-emerald-400 hover:border-emerald-500"
+                        title={`Filtrar Hub por #${t}`}
+                      >
+                        #{t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex flex-col gap-0.5 text-[10px] text-zinc-600">
+                    Tipo
+                    <select
+                      value={meta.type}
+                      onChange={(e) => setMeta({ ...meta, type: e.target.value })}
+                      className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-1 text-[11px] text-zinc-200"
+                    >
+                      {NOTE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-0.5 text-[10px] text-zinc-600">
+                    Maturidade
+                    <select
+                      value={meta.maturity}
+                      onChange={(e) => setMeta({ ...meta, maturity: e.target.value })}
+                      className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-1 text-[11px] text-zinc-200"
+                    >
+                      <option value="seedling">seedling</option>
+                      <option value="budding">budding</option>
+                      <option value="evergreen">evergreen</option>
+                    </select>
+                  </label>
+                  <label className="col-span-2 flex flex-col gap-0.5 text-[10px] text-zinc-600">
+                    Tags (separadas por vírgula)
+                    <input
+                      value={meta.tags.join(', ')}
+                      onChange={(e) => setMeta({ ...meta, tags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })}
+                      className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-1 text-[11px] text-zinc-200"
+                    />
+                  </label>
+                  <label className="col-span-2 flex flex-col gap-0.5 text-[10px] text-zinc-600">
+                    graph_id (UUID do nó no grafo — vazio = não sincronizar)
+                    <input
+                      value={meta.graphId}
+                      onChange={(e) => setMeta({ ...meta, graphId: e.target.value.trim() })}
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                      className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-1 font-mono text-[11px] text-zinc-200"
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
             {selected && (
               <div className="max-h-36 shrink-0 overflow-y-auto border-t border-zinc-800 bg-zinc-950 px-3 py-2">
                 <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-500">
