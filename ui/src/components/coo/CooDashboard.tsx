@@ -4,6 +4,7 @@ import { ShieldCheck } from 'lucide-react';
 import { useCooTelemetry } from '../../lib/cooTelemetry';
 import ApprovalCard, { type Decision } from './ApprovalCard';
 import AuditStream from './AuditStream';
+import CrmDashboard from '../crm/CrmDashboard';
 import DirectiveTerminal from './DirectiveTerminal';
 import TelemetryHeader from './TelemetryHeader';
 import ToolMatrix from './ToolMatrix';
@@ -22,6 +23,7 @@ export default function CooDashboard({ onOpenWorkspace }: Props) {
   const telemetry = useCooTelemetry();
   const [approvals, setApprovals] = useState<ApprovalItem[]>(MOCK_APPROVALS);
   const [events, setEvents] = useState<AuditEvent[]>(MOCK_AUDIT);
+  const [view, setView] = useState<'hub' | 'crm'>('hub');
 
   const onDecide = (id: string, decision: Decision) => {
     const item = approvals.find((a) => a.id === id);
@@ -66,6 +68,27 @@ export default function CooDashboard({ onOpenWorkspace }: Props) {
           updatedAt={telemetry.updatedAt}
         />
 
+        <div className="flex items-center gap-2">
+          {(['hub', 'crm'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`rounded-md border px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+                view === v
+                  ? 'border-hud-cyan/60 bg-hud-cyan/10 text-hud-cyan shadow-[0_0_16px_rgba(0,240,255,0.12)]'
+                  : 'border-slate-800 bg-slate-950/40 text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {v === 'hub' ? 'COO Hub' : 'CRM Pipeline'}
+            </button>
+          ))}
+          <span className="ml-auto font-mono text-[9px] text-slate-600">
+            {view === 'hub' ? 'governance & approvals' : 'contacts, deals & outreach'}
+          </span>
+        </div>
+
+        {view === 'hub' && (
+        <>
         <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
           <div className="min-w-0 space-y-4">
             <section className="hud-glass rounded-xl p-4">
@@ -115,6 +138,10 @@ export default function CooDashboard({ onOpenWorkspace }: Props) {
         <p className="pb-2 text-center font-mono text-[9px] text-slate-600">
           KAREN COO · BOUNDED AUTONOMY · approvals, kill-switch and directives are simulated; telemetry is read-only.
         </p>
+        </>
+        )}
+
+        {view === 'crm' && <CrmDashboard />}
       </div>
     </div>
   );
