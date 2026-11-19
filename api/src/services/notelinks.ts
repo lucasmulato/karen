@@ -13,6 +13,8 @@ export interface NoteNode {
   context: string;
   tags: string[];
   maturity: string;
+  status: string;
+  deadline: string;
   graphId: string | null;
   links: string[];
   backlinks: string[];
@@ -37,7 +39,7 @@ export interface NoteGraph {
   };
 }
 
-function slug(value: string): string {
+export function slug(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -105,6 +107,8 @@ export class NoteLinksService {
       type: string;
       tags: string[];
       maturity: string;
+      status: string;
+      deadline: string;
       graphId: string | null;
       context: string;
       links: string[];
@@ -126,6 +130,8 @@ export class NoteLinksService {
         type: noteType.toLowerCase(),
         tags: parseTags(body, meta),
         maturity: (meta.maturity || "seedling").toLowerCase(),
+        status: (meta.status || "ativo").toLowerCase(),
+        deadline: (meta.deadline || "").trim(),
         graphId: meta.graph_id || null,
         context: (meta.context || "personal").toLowerCase(),
         links: parseLinks(body),
@@ -156,6 +162,8 @@ export class NoteLinksService {
       type: p.type,
       tags: p.tags,
       maturity: p.maturity,
+      status: p.status,
+      deadline: p.deadline,
       graphId: p.graphId,
       context: p.context,
       links: edges.filter((e) => e.source === p.path).map((e) => e.target),

@@ -5,7 +5,7 @@ import MarkdownRead from './MarkdownRead';
 import GraphView, { type GraphData } from './GraphView';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
-import { Eye, FileText, FolderOpen, Home, Leaf, Link2, Network, Pencil, Save, Share2 } from 'lucide-react';
+import { Briefcase, Eye, FileText, FolderOpen, Home, Leaf, Link2, Network, Pencil, Save, Share2 } from 'lucide-react';
 import { toast } from '../toast';
 import ActivityFeed from './ActivityFeed';
 
@@ -27,7 +27,7 @@ interface GardenData {
 }
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
-type Tab = 'hub' | 'files' | 'mapa' | 'garden' | 'canvas';
+type Tab = 'hub' | 'files' | 'mapa' | 'projetos' | 'garden' | 'canvas';
 
 interface NoteMeta {
   type: string;
@@ -41,6 +41,8 @@ interface NoteNode {
   name: string;
   type: string;
   context: string;
+  status: string;
+  deadline: string;
   tags: string[];
   maturity: string;
   graphId: string | null;
@@ -121,6 +123,7 @@ const NotesPanel: React.FC = () => {
   const [maturity, setMaturity] = useState('all');
   const [canvas, setCanvas] = useState<any>(null);
   const [noteGraph, setNoteGraph] = useState<NoteGraph | null>(null);
+  const [projects, setProjects] = useState<NoteNode[]>([]);
   const [typeFilter, setTypeFilter] = useState('');
   const [tagFilter, setTagFilter] = useState('');
   const [contextFilter, setContextFilter] = useState('');
@@ -163,6 +166,12 @@ const NotesPanel: React.FC = () => {
 
   useEffect(() => {
     if (tab === 'hub' || tab === 'mapa') loadGraph();
+    if (tab === 'projetos') {
+      fetch(`${API_BASE}/notes/graph?type=project`)
+        .then((r) => r.json())
+        .then((d) => setProjects(d.nodes ?? []))
+        .catch(() => setProjects([]));
+    }
   }, [tab, loadGraph]);
 
   useEffect(() => {
@@ -393,6 +402,12 @@ const NotesPanel: React.FC = () => {
             className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'mapa' ? 'bg-zinc-800 text-cyan-400' : 'text-zinc-500 hover:text-zinc-200'}`}
           >
             <Share2 size={14} /> Mapa
+          </button>
+          <button
+            onClick={() => changeTab('projetos')}
+            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'projetos' ? 'bg-zinc-800 text-blue-400' : 'text-zinc-500 hover:text-zinc-200'}`}
+          >
+            <Briefcase size={14} /> Projetos
           </button>
           <button
             onClick={() => changeTab('garden')}
@@ -787,6 +802,33 @@ const NotesPanel: React.FC = () => {
           ) : (
             <p className="p-4 text-xs text-zinc-500">Carregando mapa de notas...</p>
           )}
+        </div>
+      )}
+
+      {tab === 'projetos' && (
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+            Projetos · ordenados por prazo
+          </p>
+          {projects
+            .slice()
+            .sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'))
+            .map((p) => (
+              <button
+                key={p.path}
+                onClick={() => openFile(p.path)}
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-left hover:border-blue-600"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-xs text-zinc-200">{p.name}</span>
+                  <span className="block text-[11px] text-zinc-600">
+                    {p.context} · {p.status} · {p.deadline || 'sem prazo'}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[10px] text-zinc-600">{p.maturity}</span>
+              </button>
+            ))}
+          {projects.length === 0 && <p className="text-xs text-zinc-600">Nenhum projeto ainda.</p>}
         </div>
       )}
 

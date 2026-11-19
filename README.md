@@ -52,6 +52,7 @@ The app opens full-width on the Hub:
 - `[[wikilinks]]` rendered as clickable links with a backlinks panel;
 - **Arquivos**: vault tree, markdown editor and `Ler`/`Editar` toggle;
 - **Mapa**: D3 graph of note-to-note links with the same legend/tooltip/reset as the main graph;
+- **Projetos**: `type: project` notes with status/context/deadline, sorted by deadline.
 - **Jardim**: maturity (seedling → budding → evergreen), stale and orphan notes;
 - **Canvas**: export/import the graph as JSON Canvas 1.0 (`.canvas`).
 
@@ -190,7 +191,8 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 
 ## Automation (implemented)
 
-- Nightly backups at 03:00 `America/São_Paulo` (`karen-backup.timer`): PostgreSQL dump + vault archive, 7-day retention, stored outside the repo.
+- Nightly backups at 03:00 `America/São_Paulo` (`karen-backup.timer`): PostgreSQL dump + vault archive, 7-day retention, stored outside the repo. Verify with `node api/scripts/restore-drill.mjs`.
+- Watchdog (`karen-watchdog.timer`, hourly): failed units, stale backups, disk, cert expiry and model health become e-mail action items.
 - Weekly dependency audit (`karen-audit.timer`, Monday 08:30 `America/São_Paulo`): writes `api/data/dependency-audit.json` and raises an e-mail action item when high/critical advisories exist. Never auto-upgrades packages.
 - Daily credit/opportunity scan at 09:00 `America/São_Paulo` (`karen-morning.timer`), with a deterministic e-mail digest.
 - Hourly action alerts (`karen-alerts.timer`) for source changes, approaching deadlines and missing critical keys, with a 24h per-topic cooldown. SMTP is required for real delivery; setup steps are recorded in `api/data/email-setup-pending.md`.
@@ -220,13 +222,19 @@ Note conventions and graph portability draw on public work — see
 licences and required attribution are in
 [docs/security-sources.md](docs/security-sources.md).
 
+The UI is also an installable PWA (manifest + service worker caching the shell,
+never the API).
+
 ## Development
 
 ```bash
 cd ui && npm run lint && npm run build
-cd api && npm run build
+cd api && npm test          # build + node --test unit tests
 ./scripts/smoke_test.sh     # needs Docker/podman
 ```
+
+Operations procedures (restore, rotate keys, add commands/sources, debug timers)
+are in [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 CI runs API build, smoke tests and UI lint/build on every push.
 

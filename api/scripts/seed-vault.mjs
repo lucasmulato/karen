@@ -113,6 +113,25 @@ Formato aberto da Obsidian para canvas infinito: nos com posicao, tamanho, cor e
 
 O [[KAREN Notes Hub]] exporta e importa o grafo nesse formato, entao o mapa nao fica preso a nenhum banco. Relacionado a [[Grafo de Notas]].
 `,
+  "10 Projects/Plano de Estudos AI Red Team.md": `---
+type: project
+context: college
+status: ativo
+deadline: 2026-12-15
+tags: [estudos, seguranca]
+maturity: budding
+---
+# Plano de Estudos AI Red Team
+
+Projeto acadêmico/pessoal de estudo estruturado em AI red teaming, com marco em 15/12/2026.
+
+## Próximos passos
+- Revisar [[Jardim Digital]] e [[Metodo Zettelkasten]] como base de estudo.
+- Transformar notas seedling em evergreen (ver [[Maturidade das Notas]]).
+- Registrar decisões no painel da EVA.
+
+Relacionado a [[KAREN Notes Hub]].
+`,
   "10 Projects/KAREN Notes Hub.md": `---
 type: project
 tags: [karen, second-brain]

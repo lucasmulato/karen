@@ -21,6 +21,10 @@ jobs:
         run: npm run build
         working-directory: api
 
+      - name: Unit tests
+        run: npm test
+        working-directory: api
+
       - name: Smoke test (ephemeral Postgres round-trip)
         run: ./scripts/smoke_test.sh
 

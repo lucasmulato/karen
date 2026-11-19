@@ -1,0 +1,92 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import { parseFrontmatter, parseLinks, slug } from "../build/services/notelinks.js";
+import { COMMANDS } from "../build/services/commands.js";
+import { draftFor } from "../build/templates/outreach.js";
+import { CanvasService } from "../build/services/canvas.js";
+import { DashboardService } from "../build/services/dashboard.js";
+
+test("frontmatter and wikilinks parse correctly", () => {
+  const meta = parseFrontmatter(
+    "---\ntype: project\ncontext: college\nstatus: ativo\ndeadline: 2026-12-15\ntags: [estudos, seguranca]\n---\n# Plano"
+  );
+  assert.equal(meta.type, "project");
+  assert.equal(meta.context, "college");
+  assert.equal(meta.status, "ativo");
+  assert.equal(meta.deadline, "2026-12-15");
+  assert.deepEqual(parseLinks("veja [[Notas Atomicas]] e [[Jardim Digital|o jardim]]"), [
+    "Notas Atomicas",
+    "Jardim Digital",
+  ]);
+  assert.equal(slug("Método Zettelkasten"), "metodo-zettelkasten");
+});
+
+test("command allowlist is safe and unique", () => {
+  const ids = COMMANDS.map((c) => c.id);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const cmd of COMMANDS) {
+    assert.ok(["read", "write"].includes(cmd.risk));
+    for (const step of cmd.steps) {
+      assert.ok(!/[;&|`$<>]/.test(step.cmd), `shell metachar in ${cmd.id}`);
+      for (const arg of step.args) {
+        assert.ok(!/[;&|`$<>]/.test(arg), `shell metachar in ${cmd.id}`);
+      }
+    }
+  }
+});
+
+test("outreach drafts never put a link in the first touch", () => {
+  const draft = draftFor(
+    {
+      title: "Pizzaria Exemplo",
+      phone: null,
+      address: null,
+      neighborhood: "Centro",
+      city: "Guarulhos",
+      category: "pizza",
+      rating: 4.5,
+      reviewsCount: 30,
+      website: null,
+      placeId: "osm:node/1",
+      mapsUrl: null,
+      scrapedAt: "2026-01-01",
+    },
+    { operatorName: "Lucas", exampleLink: "[LINK]" }
+  );
+  assert.ok(!/https?:\/\/|www\./i.test(draft.firstTouch));
+  assert.ok(draft.firstTouch.includes("Pizzaria Exemplo"));
+  assert.ok(draft.followUp.includes("[LINK]"));
+});
+
+test("canvas export produces valid JSON Canvas 1.0 shape", async () => {
+  const vault = {
+    getGraph: async () => ({
+      nodes: [
+        { id: "a", name: "A", type: "note", description: "x", properties: { _x: 10, _y: 20 } },
+        { id: "b", name: "B", type: "finding", description: "y", properties: {} },
+      ],
+      edges: [{ id: "e1", source_id: "a", target_id: "b", label: "relates_to" }],
+    }),
+  };
+  const canvas = await new CanvasService({}, vault).export();
+  assert.equal(canvas.nodes.length, 2);
+  assert.equal(canvas.nodes[0].x, 10);
+  assert.equal(canvas.nodes[0].type, "text");
+  assert.equal(canvas.edges[0].fromNode, "a");
+  assert.equal(canvas.edges[0].toEnd, "arrow");
+});
+
+test("dashboard activity mixes sources", async () => {
+  const client = {
+    query: async () => ({
+      rows: [{ command_id: "health", status: "ok", created_at: "2026-11-19T00:00:00Z" }],
+    }),
+  };
+  const notes = {
+    decisions: async () => [{ path: "decisions/x.md", text: "# Decisão X\n\n- Data: 2026-11-19" }],
+  };
+  const items = await new DashboardService(client, notes).activity();
+  assert.ok(items.some((i) => i.kind === "command"));
+  assert.ok(items.some((i) => i.kind === "decision"));
+});

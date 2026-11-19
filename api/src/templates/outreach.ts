@@ -62,7 +62,7 @@ export function draftFor(place: ScrapedPlace, ctx: DraftContext): OutreachDraft 
     ].join("\n");
   } else if (model === "agilidade") {
     firstTouch = [
-      `Olá, tudo bem? Me chamo ${who}, sou da região${local ? ` (${local})` : ""}.`,
+      `Olá, tudo bem? Me chamo ${who}, sou da região${local ? ` (${local})` : ""}. Vi o ${first} aqui perto e queria te mandar uma ideia rápida.`,
       "",
       `Sei que no horário do almoço a correria é grande e atender muitos pedidos no WhatsApp pode gerar confusão ou demora. Estou ajudando restaurantes aqui por perto a organizarem os pedidos com um cardápio digital que o próprio cliente monta.`,
       "",
@@ -70,7 +70,7 @@ export function draftFor(place: ScrapedPlace, ctx: DraftContext): OutreachDraft 
     ].join("\n");
   } else {
     firstTouch = [
-      `Olá, tudo bem? Me chamo ${who}, sou desenvolvedor aqui da região${local ? ` (${local})` : ""}.`,
+      `Olá, tudo bem? Me chamo ${who}, sou desenvolvedor aqui da região${local ? ` (${local})` : ""}. Estava vendo o ${first} e queria te fazer uma sugestão rápida.`,
       "",
       `Estou criando uma ferramenta simples de cardápio digital para ajudar restaurantes da região a receberem pedidos de forma mais organizada (sem aquele monte de mensagem solta no WhatsApp).`,
       "",
