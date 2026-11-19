@@ -67,6 +67,12 @@ async function main() {
       ],
     });
   }
+  try {
+    const extras = JSON.parse(
+      await readFile("/home/admin/karen/api/data/action-items.json", "utf8")
+    );
+    for (const extra of extras) items.push(extra);
+  } catch { /* ignore */ }
 
   let state = {};
   if (await exists(STATE)) {

@@ -188,6 +188,8 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 
 ## Automation (implemented)
 
+- Nightly backups at 03:00 `America/São_Paulo` (`karen-backup.timer`): PostgreSQL dump + vault archive, 7-day retention, stored outside the repo.
+- Weekly dependency audit (`karen-audit.timer`, Monday 08:30 `America/São_Paulo`): writes `api/data/dependency-audit.json` and raises an e-mail action item when high/critical advisories exist. Never auto-upgrades packages.
 - Daily credit/opportunity scan at 09:00 `America/São_Paulo` (`karen-morning.timer`), with a deterministic e-mail digest.
 - Hourly action alerts (`karen-alerts.timer`) for source changes, approaching deadlines and missing critical keys, with a 24h per-topic cooldown. SMTP is required for real delivery; setup steps are recorded in `api/data/email-setup-pending.md`.
 - Working contexts (`context:` frontmatter, `CONTEXT.md`, `set_context` / `get_context`) shared by the Hub, Mapa and the assistant.
@@ -204,9 +206,10 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 
 Mode and context live in `MODE.md` / `CONTEXT.md` inside the private vault.
 
-## Roadmap (planned, not implemented)
+## Roadmap
 
-- Nightly backups (Postgres dump + vault rsync) and dependency audits.
+No open items. Suggested future work: optional local embeddings, a mobile client
+and deeper multi-agent workflows.
 
 ## Sources and credits
 
