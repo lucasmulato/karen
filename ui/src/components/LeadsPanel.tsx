@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Ban,
   Copy,
+  ExternalLink,
   Download,
   Loader2,
   MapPin,
@@ -104,6 +105,7 @@ const LeadsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [result, setResult] = useState<RunResult | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
+  const [phoneDrafts, setPhoneDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetch(`${API_BASE}/chat/status`)
@@ -184,6 +186,42 @@ const LeadsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }
   }
 
+  async function savePhone(id: string) {
+    const phone = phoneDrafts[id] ?? '';
+    try {
+      const res = await fetch(`${API_BASE}/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              leads: prev.leads.map((l) => (l.id === id ? data : l)),
+            }
+          : prev
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  function whatsappUrl(lead: Lead): string | null {
+    if (!lead.phone) return null;
+    let digits = lead.phone.replace(/\D/g, '');
+    if (digits.length === 10 || digits.length === 11) digits = `55${digits}`;
+    if (!digits) return null;
+    return `https://wa.me/${digits}?text=${encodeURIComponent(lead.draft.firstTouch)}`;
+  }
+
+  function mapsUrl(lead: Lead): string {
+    const q = [lead.title, lead.neighborhood, lead.city || 'Guarulhos'].filter(Boolean).join(', ');
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  }
+
   function download() {
     if (!result?.leads.length) return;
     const blob = new Blob([toCsv(result.leads)], { type: 'text/csv;charset=utf-8' });
@@ -203,7 +241,7 @@ const LeadsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             KAREN · Leads
           </h2>
           <p className="text-[11px] text-zinc-500">
-            Google Maps → mensagens prontas para copiar (nada é enviado automaticamente)
+            OpenStreetMap → mensagens prontas para copiar · telefones podem ser preenchidos manualmente
           </p>
         </div>
         <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded-md" title="Fechar">
@@ -336,8 +374,46 @@ const LeadsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   <div>
                     <div className="font-medium text-sm text-zinc-100">{lead.title}</div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-zinc-500">
-                      {lead.phone && (
-                        <span className="flex items-center gap-1"><Phone size={11} />{lead.phone}</span>
+                      {lead.phone ? (
+                        <>
+                          <span className="flex items-center gap-1"><Phone size={11} />{lead.phone}</span>
+                          {whatsappUrl(lead) && (
+                            <a
+                              href={whatsappUrl(lead)!}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300"
+                              title="Abrir WhatsApp com a 1ª mensagem pronta (envio manual)"
+                            >
+                              <ExternalLink size={11} /> WhatsApp
+                            </a>
+                          )}
+                        </>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <Phone size={11} />
+                          <input
+                            value={phoneDrafts[lead.id] ?? ''}
+                            onChange={(e) => setPhoneDrafts((d) => ({ ...d, [lead.id]: e.target.value }))}
+                            placeholder="telefone (busque no Maps)"
+                            className="w-40 rounded border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-[10px] text-zinc-200"
+                          />
+                          <button
+                            onClick={() => savePhone(lead.id)}
+                            className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-blue-400 hover:border-blue-500"
+                          >
+                            Salvar
+                          </button>
+                          <a
+                            href={mapsUrl(lead)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-zinc-500 hover:text-blue-400"
+                            title="Abrir no Google Maps para encontrar o telefone"
+                          >
+                            <ExternalLink size={11} />
+                          </a>
+                        </span>
                       )}
                       {(lead.neighborhood || lead.city) && (
                         <span className="flex items-center gap-1"><MapPin size={11} />{[lead.neighborhood, lead.city].filter(Boolean).join(', ')}</span>

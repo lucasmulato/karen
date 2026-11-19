@@ -159,6 +159,16 @@ export class LeadService {
     );
     return res.rowCount ? mapRow(res.rows[0]) : null;
   }
+
+  /** Manually verified phone number (OSM coverage is sparse in Brazil). */
+  async setPhone(id: string, phone: string | null): Promise<LeadRow | null> {
+    const clean = phone?.trim() || null;
+    const res = await this.client.query(
+      `UPDATE leads SET phone = $2 WHERE id = $1::uuid RETURNING ${COLUMNS}`,
+      [id, clean]
+    );
+    return res.rowCount ? mapRow(res.rows[0]) : null;
+  }
 }
 
 export type { ScrapedPlace };

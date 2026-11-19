@@ -188,6 +188,10 @@ OPERATOR_NAME="Seu Nome"
 KAREN_EXAMPLE_LINK=https://...       # used only in the follow-up
 ```
 
+Because OSM rarely carries phone tags in Brazil, the lead panel lets you type a
+verified number (`PATCH /api/leads/:id`), open the place in Google Maps to look
+it up, and open WhatsApp with the first message pre-filled — sending stays manual.
+
 Apify costs US$1.50 per 1,000 scraped places (~US$0.08 for 50). Reviews,
 contact/social enrichment and competitor analysis are explicitly disabled —
 enabling them can raise a run by 40–100x. Leads are deduplicated by provider ID

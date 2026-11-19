@@ -304,6 +304,10 @@ const noteWriteSchema = z.object({
   content: z.string().max(60_000),
 });
 
+const leadPhoneSchema = z.object({
+  phone: z.string().max(40).nullable(),
+});
+
 const canvasImportSchema = z.object({
   nodes: z
     .array(
@@ -604,6 +608,22 @@ async function handleHttp(
       } catch (err: any) {
         sendJson(res, 502, { error: err.message });
       }
+      return;
+    }
+
+    if (req.method === "PATCH" && /^\/api\/leads\/[\da-f-]+$/i.test(path)) {
+      const id = path.split("/")[3];
+      const parsed = leadPhoneSchema.safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      const row = await leads.setPhone(id, parsed.data.phone);
+      if (!row) {
+        sendJson(res, 404, { error: "Lead not found" });
+        return;
+      }
+      sendJson(res, 200, row);
       return;
     }
 
