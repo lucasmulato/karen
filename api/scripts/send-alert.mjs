@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Event-driven KAREN alerts. Runs hourly; sends only for real action items:
- * source changes, approaching deadlines or missing critical keys. Cooldown of
- * 24h per topic prevents spam. Never prints or sends secret values.
+ * Event-driven KAREN alerts. Nothing runs on an hourly e-mail timer: the
+ * watchdog calls `send-alert.mjs --urgent` only when a new/updated urgent
+ * finding appears. Cooldown is 6h per topic for urgent mail (24h for the
+ * legacy info mode). Never prints or sends secret values.
  */
 import { readFile, writeFile, mkdir, access } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
@@ -14,15 +15,16 @@ const REPORT = resolve(
 const STATE = resolve("/home/admin/karen/api/data/alert-state.json");
 const PENDING = resolve("/home/admin/karen/api/data/email-setup-pending.md");
 const ENV_FILE = resolve(process.env.KAREN_ENV_FILE || "/home/admin/models/karen.env");
-const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const URGENT = process.argv.includes("--urgent");
 const DRY = process.argv.includes("--dry-run");
+const COOLDOWN_MS = URGENT ? 6 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
 
+// Only genuinely critical configuration belongs here. Optional integrations
+// (Apify, Cloudflare) are reported as info in the twice-daily digest instead.
 const CRITICAL_KEYS = [
   ["SMTP_USER", "configurar e-mail da KAREN"],
   ["SMTP_APP_PASSWORD", "configurar e-mail da KAREN"],
   ["KAREN_API_KEY", "restaurar autenticação da API"],
-  ["APIFY_TOKEN", "opcional: leads pagos (necessário só se LEAD_PROVIDER=apify)"],
-  ["CLOUDFLARE_API_TOKEN", "opcional: buscas semânticas com embeddings"],
 ];
 
 async function exists(p) {
@@ -54,6 +56,7 @@ async function main() {
       topic: "credit-changes",
       title: `${report.changes.length} mudança(s) em fontes oficiais`,
       steps: report.changes.map((c) => `Confirmar ${c.url} (HTTP ${c.from} → ${c.to}).`),
+      severity: "info",
     });
   }
   for (const [name, reason] of missingKeys(envText)) {
@@ -65,6 +68,7 @@ async function main() {
         `Preencher em ${ENV_FILE} (fora do repo).`,
         `Reiniciar os serviços: sudo systemctl restart karen-api karen-morning.service`,
       ],
+      severity: "info",
     });
   }
   try {
@@ -74,13 +78,18 @@ async function main() {
     for (const extra of extras) items.push(extra);
   } catch { /* ignore */ }
 
+  const candidates = items.filter((item) =>
+    URGENT ? item.severity === "urgent" : item.severity !== "urgent"
+  );
+
   let state = {};
   if (await exists(STATE)) {
     try { state = JSON.parse(await readFile(STATE, "utf8")); } catch { /* ignore */ }
   }
   const now = Date.now();
-  const due = items.filter((item) => {
-    const last = state[item.topic];
+  const stateKey = (item) => `${URGENT ? "urgent:" : ""}${item.topic}`;
+  const due = candidates.filter((item) => {
+    const last = state[stateKey(item)];
     return !last || now - Date.parse(last) > COOLDOWN_MS;
   });
 
@@ -89,14 +98,16 @@ async function main() {
     return;
   }
 
-  const subject = `KAREN · ALERTA · ${due.length} item(ns) para você`;
+  const subject = URGENT
+    ? `KAREN · URGENTE · ${due.length} item(ns) para você`
+    : `KAREN · ALERTA · ${due.length} item(ns) para você`;
   const body = [
     "<h2>KAREN — o que precisa de você</h2>",
     ...due.map(
       (item) =>
         `<h3>${item.title}</h3><ol>${item.steps.map((s) => `<li>${s}</li>`).join("")}</ol>`
     ),
-    `<hr><small>${mode === "eva" ? "EVA — co-sócia da KAREN" : "KAREN"} · Alerta automático. Nenhum segredo é enviado por e-mail.</small>`,
+    `<hr><small>${mode === "eva" ? "EVA — co-sócia da KAREN" : "KAREN"} · ${URGENT ? "Alerta urgente" : "Alerta automático"}. Nenhum segredo é enviado por e-mail.</small>`,
   ].join("");
 
   if (DRY) {
@@ -117,7 +128,7 @@ async function main() {
       "O que fazer:",
       "1. Gerar app password Gmail (Conta Google → Segurança → 2FA → Senhas de app).",
       "2. Preencher SMTP_USER e SMTP_APP_PASSWORD em /home/admin/models/karen.env.",
-      "3. Reiniciar: sudo systemctl restart karen-alerts.service",
+      "3. Reiniciar: sudo systemctl restart karen-api karen-evening.timer",
       "",
       `Alertas pendentes: ${due.map((d) => d.topic).join(", ")}`,
     ].join("\n");
@@ -130,7 +141,7 @@ async function main() {
 
   const transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
   await transporter.sendMail({ from: user, to: process.env.REPORT_TO || user, subject, html: body });
-  for (const item of due) state[item.topic] = new Date().toISOString();
+  for (const item of due) state[stateKey(item)] = new Date().toISOString();
   await mkdir(dirname(STATE), { recursive: true });
   await writeFile(STATE, JSON.stringify(state, null, 2), "utf8");
   console.log(`KAREN alert sent: ${due.map((d) => d.topic).join(", ")}`);

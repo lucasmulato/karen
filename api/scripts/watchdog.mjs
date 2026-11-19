@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Self-monitoring for the KAREN automation itself. Writes action items that
- * send-alert.mjs delivers by e-mail with its 24h cooldown.
+ * Self-monitoring for the KAREN automation itself. Writes action items; every
+ * finding is urgent, so a NEW/CHANGED finding e-mails immediately through
+ * `send-alert.mjs --urgent`. Hourly runs only detect — they do not e-mail.
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -14,15 +15,15 @@ const ACTIONS = resolve("/home/admin/karen/api/data/action-items.json");
 const BACKUP_DIR = resolve(process.env.KAREN_BACKUP_DIR || "/home/admin/backups/karen");
 const HOST = process.env.KAREN_PUBLIC_HOST || "karen.164.68.109.252.sslip.io";
 
-function item(topic, title, steps) {
-  return { topic, title, steps };
+function item(topic, title, steps, severity = "urgent") {
+  return { topic, title, steps, severity };
 }
 
 async function main() {
   const items = [];
 
   // 1. systemd units
-  for (const unit of ["karen-api.service", "karen-llama.service", "karen-morning.timer", "karen-alerts.timer", "karen-backup.timer", "karen-audit.timer"]) {
+  for (const unit of ["karen-api.service", "karen-llama.service", "karen-morning.timer", "karen-evening.timer", "karen-backup.timer", "karen-audit.timer"]) {
     try {
       const { stdout } = await run("systemctl", ["is-active", unit]);
       if (stdout.trim() !== "active") {
@@ -127,12 +128,33 @@ async function main() {
 
   let existing = [];
   try { existing = JSON.parse(await readFile(ACTIONS, "utf8")); } catch { /* ignore */ }
+  const previous = new Map(existing.map((a) => [a.topic, a]));
+  const changed = items.filter((i) => {
+    const prev = previous.get(i.topic);
+    if (!prev) return true;
+    const same = prev.title === i.title && JSON.stringify(prev.steps) === JSON.stringify(i.steps);
+    return !same;
+  });
   const byTopic = new Map(existing.map((a) => [a.topic, a]));
   for (const i of items) byTopic.set(i.topic, i);
   const merged = [...byTopic.values()];
   await mkdir(dirname(ACTIONS), { recursive: true });
   await writeFile(ACTIONS, JSON.stringify(merged, null, 2), "utf8");
-  console.log(`Watchdog: ${items.length} new/updated item(s), ${merged.length} total.`);
+  console.log(`Watchdog: ${items.length} detected, ${changed.length} new/updated, ${merged.length} total.`);
+
+  // E-mail immediately, but only for genuinely new/changed urgent findings.
+  const urgent = changed.filter((i) => i.severity === "urgent");
+  if (urgent.length) {
+    try {
+      await run(process.execPath, ["/home/admin/karen/api/scripts/send-alert.mjs", "--urgent"], {
+        cwd: "/home/admin/karen/api",
+        timeout: 30_000,
+      });
+      console.log(`Urgent alert sent for: ${urgent.map((i) => i.topic).join(", ")}`);
+    } catch (err) {
+      console.error(`Falha ao enviar alerta urgente: ${err.message}`);
+    }
+  }
 }
 
 main().catch((err) => {

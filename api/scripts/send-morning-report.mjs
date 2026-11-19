@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Sends the deterministic morning digest. Reads only the daily credit report
- * and aggregate note counts — no secrets, tokens or registry contents go into
- * the message. Use --dry-run to render without sending.
+ * Sends the deterministic digest at 09:00 and, with --evening, at 21:00.
+ * Includes the credit report, aggregate note counts and open action items —
+ * no secrets, tokens or values are put in the message.
+ * Use --dry-run to render without sending.
  */
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
@@ -16,6 +17,10 @@ const DATABASE_URL =
   process.env.DATABASE_URL ||
   "postgresql://postgres:postgres@localhost:5432/synapsevault";
 const DRY = process.argv.includes("--dry-run");
+const EVENING = process.argv.includes("--evening");
+const ACTIONS = resolve("/home/admin/karen/api/data/action-items.json");
+const ENV_FILE = resolve(process.env.KAREN_ENV_FILE || "/home/admin/models/karen.env");
+const OPTIONAL_KEYS = ["APIFY_TOKEN", "CLOUDFLARE_API_TOKEN"];
 
 function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (c) =>
@@ -49,6 +54,22 @@ async function gardenStats() {
   }
 }
 
+async function pendingItems() {
+  try {
+    const items = JSON.parse(await readFile(ACTIONS, "utf8"));
+    return Array.isArray(items) ? items : [];
+  } catch { return []; }
+}
+
+async function missingOptionalKeys() {
+  let envText = "";
+  try { envText = await readFile(ENV_FILE, "utf8"); } catch { /* ignore */ }
+  return OPTIONAL_KEYS.filter((name) => {
+    if (Boolean(process.env[name]?.trim())) return false;
+    return !new RegExp(`^${name}=(.+)$`, "m").test(envText);
+  });
+}
+
 async function main() {
   const report = JSON.parse(await readFile(OUTPUT, "utf8"));
   let mode = "karen";
@@ -59,7 +80,11 @@ async function main() {
   const stats = await gardenStats();
   const top = report.priorities?.slice(0, 3) ?? [];
   const changes = report.changes?.length ?? 0;
-  const subject = `KAREN · ${report.date} · ${top.length} prioridades, ${changes} mudanças`;
+  const pending = await pendingItems();
+  const optionalMissing = await missingOptionalKeys();
+  const subject = EVENING
+    ? `KAREN · noite · ${report.date} · ${top.length} prioridades, ${changes} mudanças`
+    : `KAREN · ${report.date} · ${top.length} prioridades, ${changes} mudanças`;
   const sections = [
     `<h2>Créditos e prazos</h2>`,
     top.length
@@ -77,6 +102,14 @@ async function main() {
     `<p>${stats.notes} notas no grafo · ${stats.orphans} órfãs · ${stats.stale} paradas há 30+ dias.</p>`,
     `<h2>Uma sugestão</h2>`,
     `<p>${top[0] ? `Avaliar primeiro: ${escapeHtml(top[0].title)}.` : "Nenhuma ação prioritária — dia calmo."}</p>`,
+    `<h2>Pendências</h2>`,
+    pending.length
+      ? `<ul>${pending.map((p) => `<li><b>${escapeHtml(p.title)}</b>${p.steps?.length ? `<ul>${p.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>` : ""}</li>`).join("")}</ul>`
+      : `<p>Nada pendente.</p>`,
+    `<h2>Configuração opcional</h2>`,
+    optionalMissing.length
+      ? `<p>Sem configurar: ${optionalMissing.map(escapeHtml).join(", ")}. Não são necessários para o uso básico.</p>`
+      : `<p>Tudo configurado.</p>`,
     `<hr><small>${mode === "eva" ? "EVA — co-sócia da KAREN" : "KAREN — seu assistente"} · Relatório determinístico. Nenhum segredo é enviado por e-mail.</small>`,
   ];
   const html = `<div style="font-family:system-ui,sans-serif;max-width:640px">${sections.join("")}</div>`;

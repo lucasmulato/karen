@@ -194,13 +194,13 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 ## Automation (implemented)
 
 - Nightly backups at 03:00 `America/São_Paulo` (`karen-backup.timer`): PostgreSQL dump + vault archive, 7-day retention, stored outside the repo. Verify with `node api/scripts/restore-drill.mjs`.
-- Watchdog (`karen-watchdog.timer`, hourly): failed units, stale backups, disk, cert expiry and model health become e-mail action items.
+- Watchdog (`karen-watchdog.timer`, hourly): failed units, stale backups, disk, cert expiry, model health and failed logins become action items. A new/changed finding e-mails **immediately** via `send-alert.mjs --urgent` (6h per-topic cooldown); hourly runs only detect, they never e-mail on a schedule.
 - Monthly OS update check (`karen-osupdates.timer`) raises an e-mail item instead of upgrading automatically.
 - Optional offsite backup (`karen-offsite.timer`, 04:00): AES-256 encrypted copies pushed to a private git repo (see `docs/OPERATIONS.md`).
 - EVA weekly strategy review (`karen-eva-weekly.timer`, Monday 10:00): decision-format e-mail with ranked opportunities, open actions, note health and decision history.
 - Weekly dependency audit (`karen-audit.timer`, Monday 08:30 `America/São_Paulo`): writes `api/data/dependency-audit.json` and raises an e-mail action item when high/critical advisories exist. Never auto-upgrades packages.
-- Daily credit/opportunity scan at 09:00 `America/São_Paulo` (`karen-morning.timer`), with a deterministic e-mail digest.
-- Hourly action alerts (`karen-alerts.timer`) for source changes, approaching deadlines and missing critical keys, with a 24h per-topic cooldown. SMTP is required for real delivery; setup steps are recorded in `api/data/email-setup-pending.md`.
+- Deterministic digests at **09:00 and 21:00** `America/São_Paulo` (`karen-morning.timer` scans credits first; `karen-evening.timer` reuses the report without re-scanning). Both contain the report **plus open action items**. Optional integrations (Apify/Cloudflare) appear only as info in the digest — never as alerts.
+- No hourly alert e-mail: `karen-alerts.timer` was retired in favour of event-driven urgent alerts. SMTP is required for real delivery; setup steps are recorded in `api/data/email-setup-pending.md`.
 - Working contexts (`context:` frontmatter, `CONTEXT.md`, `set_context` / `get_context`) shared by the Hub, Mapa and the assistant.
 
 ## Client proposal portal

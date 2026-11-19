@@ -20,7 +20,7 @@ Public landing: `/`. Login page: `/login.html`. Protected app: `/app/`.
 
 ```bash
 sudo systemctl status karen-llama karen-api
-sudo systemctl list-timers karen-morning.timer karen-alerts.timer \
+sudo systemctl list-timers karen-morning.timer karen-evening.timer \
   karen-backup.timer karen-audit.timer karen-watchdog.timer
 curl -s http://127.0.0.1:3000/api/health/full
 ```
@@ -29,15 +29,28 @@ curl -s http://127.0.0.1:3000/api/health/full
 
 | Timer | Schedule (America/São_Paulo) | Job |
 |---|---|---|
-| `karen-morning` | daily 09:00 | credit scan + e-mail digest |
-| `karen-alerts` | hourly | action alerts (changes, keys, deps, watchdog) |
-| `karen-watchdog` | hourly | units, backup age, disk, cert, llama |
+| `karen-morning` | daily 09:00 | credit scan + e-mail digest (report + pending findings) |
+| `karen-evening` | daily 21:00 | e-mail digest (report + pending findings, no re-scan) |
+| `karen-watchdog` | hourly | units, backup age, disk, cert, llama, failed logins; e-mails only for new/urgent findings |
 | `karen-backup` | daily 03:00 | Postgres dump + vault tar, 7-day retention |
 | `karen-audit` | Monday 08:30 | npm audit report |
 | `karen-eva-weekly` | Monday 10:00 | EVA strategy-review e-mail |
 
 Run one manually: `sudo systemctl start <name>.service`. Logs:
 `journalctl -u <name>.service -n 50`.
+
+### E-mail cadence
+
+Two digests per day (09:00 and 21:00) carry the credit/notes report plus all
+open action items. There is no hourly alert timer anymore: the hourly watchdog
+only *detects* findings, and a **new or changed** finding triggers
+`send-alert.mjs --urgent` immediately (6h cooldown per topic, tracked in
+`api/data/alert-state.json` under `urgent:` keys). Optional keys
+(`APIFY_TOKEN`, `CLOUDFLARE_API_TOKEN`) appear as info in the digest only.
+
+Preview without sending:
+`node scripts/send-morning-report.mjs --evening --dry-run` and
+`node scripts/send-alert.mjs --urgent --dry-run` (from `api/`).
 
 ## Restore a backup
 
