@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/app/',
   plugins: [react()],
   server: {
     // Proxy API calls to the SynapseVault gateway so the UI can use

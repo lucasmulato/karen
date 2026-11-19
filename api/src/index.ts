@@ -22,6 +22,7 @@ import { NoteLinksService } from "./services/notelinks.js";
 import { NoteGraphBridge } from "./services/notebridge.js";
 import { DashboardService } from "./services/dashboard.js";
 import { PortalService } from "./services/portal.js";
+import { AuthService } from "./services/auth.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -55,6 +56,7 @@ const noteLinks = new NoteLinksService(notes);
 const noteBridge = new NoteGraphBridge(client, notes, noteLinks);
 const dashboard = new DashboardService(client, notes);
 const portal = new PortalService(notes);
+const auth = new AuthService();
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -422,6 +424,48 @@ async function handleHttp(
   }
 
   try {
+    // --- Session auth --------------------------------------------------------
+    if (req.method === "POST" && path === "/api/auth/login") {
+      const parsed = z
+        .object({ username: z.string().min(1).max(50), password: z.string().min(1).max(200) })
+        .safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      const ip = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "unknown").split(",")[0].trim();
+      const token = await auth.login(parsed.data.username, parsed.data.password, ip);
+      if (!token) {
+        sendJson(res, 401, { error: "Usuário ou senha inválidos" });
+        return;
+      }
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Set-Cookie": auth.cookie(token),
+      });
+      res.end(JSON.stringify({ ok: true, username: parsed.data.username }));
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/auth/logout") {
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Set-Cookie": auth.clearCookie(),
+      });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (req.method === "GET" && (path === "/api/auth/me" || path === "/api/auth/verify")) {
+      const session = auth.session(req);
+      if (!session) {
+        sendJson(res, 401, { error: "Não autenticado" });
+        return;
+      }
+      sendJson(res, 200, { username: session.username });
+      return;
+    }
+
     if (req.method === "GET" && path.startsWith("/portal/")) {
       const token = path.slice("/portal/".length);
       const proposal = await portal.findByToken(token);
@@ -968,6 +1012,15 @@ async function handleHttp(
 async function main() {
   await connectDb();
   await notes.ensureStructure();
+
+  // Bootstrap the first local user from the existing Basic-auth credential.
+  try {
+    const basic = readFileSync("/home/admin/models/karen-web-password", "utf8");
+    const password = basic.match(/^password:\s*(.+)$/m)?.[1]?.trim();
+    if (password) await auth.ensureAdmin(password);
+  } catch {
+    // Auth still works for existing users; bootstrap is best-effort.
+  }
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

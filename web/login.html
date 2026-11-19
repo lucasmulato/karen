@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#09090b">
+<title>Entrar — KAREN</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:#09090b; color:#fafafa; font-family:system-ui,-apple-system,sans-serif; display:grid; place-items:center; padding:20px; }
+  form { width:100%; max-width:380px; background:#18181b; border:1px solid #3f3f46; border-radius:20px; padding:32px; box-shadow:0 24px 70px rgba(0,0,0,.5); }
+  h1 { margin:0 0 6px; font-size:24px; letter-spacing:.12em; }
+  p { color:#a1a1aa; font-size:13px; margin:0 0 24px; }
+  label { display:block; font-size:12px; color:#a1a1aa; margin:14px 0 6px; }
+  input { width:100%; padding:12px 14px; border-radius:10px; border:1px solid #3f3f46; background:#09090b; color:#fafafa; font-size:14px; outline:none; }
+  input:focus { border-color:#3b82f6; box-shadow:0 0 0 2px rgba(59,130,246,.25); }
+  button { width:100%; margin-top:22px; padding:12px; border:0; border-radius:10px; background:#2563eb; color:#fff; font-size:14px; font-weight:600; cursor:pointer; }
+  button:hover { background:#3b82f6; }
+  button:disabled { opacity:.5; cursor:wait; }
+  .error { margin-top:14px; color:#fca5a5; font-size:12px; min-height:16px; }
+  .back { display:block; text-align:center; margin-top:20px; color:#71717a; font-size:12px; text-decoration:none; }
+  .back:hover { color:#a1a1aa; }
+</style>
+</head>
+<body>
+  <form id="login">
+    <h1>KAREN</h1>
+    <p>Entre no seu assistente</p>
+    <label for="username">Usuário</label>
+    <input id="username" name="username" value="karen" autocomplete="username" required>
+    <label for="password">Senha</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+    <button type="submit">Entrar</button>
+    <div class="error" id="error"></div>
+    <a class="back" href="/">← Voltar</a>
+  </form>
+  <script>
+    document.getElementById('login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const button = e.target.querySelector('button');
+      const error = document.getElementById('error');
+      error.textContent = '';
+      button.disabled = true;
+      button.textContent = 'Entrando...';
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Falha no login');
+        }
+        window.location.href = '/app/';
+      } catch (err) {
+        error.textContent = err.message;
+        button.disabled = false;
+        button.textContent = 'Entrar';
+      }
+    });
+  </script>
+</body>
+</html>

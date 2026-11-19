@@ -1,6 +1,6 @@
 /* KAREN shell cache. API calls are never cached. */
-const CACHE = "karen-shell-v1";
-const SHELL = ["/", "/index.html", "/favicon.svg", "/icons.svg"];
+const CACHE = "karen-shell-v2";
+const SHELL = ["/app/", "/app/index.html", "/app/favicon.svg", "/app/icons.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -34,7 +34,7 @@ self.addEventListener("fetch", (event) => {
             caches.open(CACHE).then((cache) => cache.put(request, copy));
             return response;
           })
-          .catch(() => caches.match("/index.html"))
+          .catch(() => caches.match("/app/index.html"))
     )
   );
 });

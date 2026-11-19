@@ -3,6 +3,16 @@
 Practical procedures for the VPS deployment. Keep secrets out of this document
 and out of git. Live credentials are in `/home/admin/models/karen.env` (mode 600).
 
+## Login and sessions
+
+Public landing: `/`. Login page: `/login.html`. Protected app: `/app/`.
+- Users are stored in `KAREN_USERS_FILE` (default `/home/admin/models/karen-users.json`, mode 600) as scrypt hashes.
+- Sessions are HMAC-signed with `KAREN_SESSION_SECRET` and stored in an HttpOnly/Secure cookie for 7 days.
+- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
+- Logout clears the cookie; to revoke a stolen token, rotate `KAREN_SESSION_SECRET` (invalidates every session).
+- `/portal/<token>` is intentionally public and does not use sessions.
+- Google OAuth can be added later behind the same auth layer.
+
 ## Verify the system
 
 ```bash

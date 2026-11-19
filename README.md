@@ -25,9 +25,10 @@ leads or running allowlisted operational commands.
 ## Private demo
 
 A running instance is available at **https://karen.164.68.109.252.sslip.io/**
-(free wildcard DNS, Let's Encrypt TLS). It is a **private single-user demo
-protected by HTTP Basic auth** — personal use only, please do not probe or
-abuse it. To run your own, follow the setup below.
+(free wildcard DNS, Let's Encrypt TLS). The root is a public landing page; the
+assistant lives at `/app/` behind a **session login** (user `karen`). Client
+proposals are public only via unguessable `/portal/<token>` links. Personal
+instance — please do not probe or abuse it.
 
 ## Architecture
 
@@ -183,7 +184,7 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 ## Security & privacy
 
 - No token, password or API key is committed. Runtime secrets live in an env file outside the repo (`KAREN_API_KEY`, `APIFY_TOKEN`, …).
-- Remote access is protected by HTTP Basic auth at the reverse proxy plus an injected `X-Karen-Key` header; direct API-port access is firewalled.
+- Remote access uses a session login (scrypt password hashes outside the repo, HMAC-signed HttpOnly/Secure cookies, 7-day expiry, login rate limiting) enforced by OpenResty `auth_request`. `X-Karen-Key` remains an internal defense; direct API-port access is firewalled.
 - Only `/api/*` is proxied to the API; the MCP stdio surface remains local.
 - Commands are allowlisted, argument-free and spawned without a shell; mutating ones require human approval.
 - The markdown vault (`KAREN_VAULT_DIR`) is outside the repo; `MEMORY.md` is append-only and cannot be rewritten by the note editor.
