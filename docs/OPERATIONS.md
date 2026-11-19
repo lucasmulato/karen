@@ -10,7 +10,7 @@ Public landing: `/`. Login page: `/login.html`. Protected app: `/app/`.
 - Sessions are HMAC-signed with `KAREN_SESSION_SECRET` and stored in an HttpOnly/Secure cookie for 7 days.
 - `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
 - Logout clears the cookie; to revoke a stolen token, rotate `KAREN_SESSION_SECRET` (invalidates every session).
-- `/portal/<token>` is intentionally public and does not use sessions.
+- `/portal/<token>` is intentionally public and does not use sessions. Every other `/api/*` route requires the session cookie via `auth_request`; only `/api/auth/login` and the internal `/api/auth/verify` are public. A 401 from any API call redirects the SPA to `/login.html`.
 - Google OAuth can be added later behind the same auth layer.
 
 ## Verify the system
