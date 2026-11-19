@@ -64,6 +64,11 @@ export class PortalService {
       const meta = parseFrontmatter(body);
       const expected = (meta.token ?? "").trim();
       if (expected && expected === token) {
+        // Expired proposals are treated as not found.
+        if (meta.expires) {
+          const until = Date.parse(meta.expires);
+          if (Number.isFinite(until) && Date.now() > until) return null;
+        }
         const title = meta.title || body.split("\n").find((l) => l.startsWith("# "))?.replace(/^#\s*/, "") || name.replace(/\.md$/, "");
         return {
           client: meta.client || "Cliente",

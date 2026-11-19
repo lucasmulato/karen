@@ -434,16 +434,67 @@ async function handleHttp(
         return;
       }
       const ip = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "unknown").split(",")[0].trim();
-      const token = await auth.login(parsed.data.username, parsed.data.password, ip);
-      if (!token) {
+      const result = await auth.login(parsed.data.username, parsed.data.password, ip);
+      if (!result) {
         sendJson(res, 401, { error: "Usuário ou senha inválidos" });
+        return;
+      }
+      if (result.mfaRequired) {
+        sendJson(res, 200, { mfaRequired: true, pendingToken: result.pendingToken });
+        return;
+      }
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Set-Cookie": auth.cookie(result.token!),
+      });
+      res.end(JSON.stringify({ ok: true, username: parsed.data.username }));
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/auth/mfa/complete") {
+      const parsed = z
+        .object({ pendingToken: z.string().min(10), code: z.string().min(6).max(6) })
+        .safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      const token = await auth.completeMfa(parsed.data.pendingToken, parsed.data.code);
+      if (!token) {
+        sendJson(res, 401, { error: "Código inválido ou expirado" });
         return;
       }
       res.writeHead(200, {
         "Content-Type": "application/json",
         "Set-Cookie": auth.cookie(token),
       });
-      res.end(JSON.stringify({ ok: true, username: parsed.data.username }));
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/auth/mfa/setup") {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      const setup = await auth.setupMfa(session.username);
+      sendJson(res, 200, setup);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/auth/mfa/enable") {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      const parsed = z.object({ code: z.string().min(6).max(6) }).safeParse(await readBody(req));
+      if (!parsed.success) { sendJson(res, 400, { error: z.prettifyError(parsed.error) }); return; }
+      const ok = await auth.enableMfa(session.username, parsed.data.code);
+      sendJson(res, ok ? 200 : 400, { ok });
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/auth/revoke-all") {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      await auth.revokeAll(session.username);
+      sendJson(res, 200, { ok: true });
       return;
     }
 
@@ -457,7 +508,7 @@ async function handleHttp(
     }
 
     if (req.method === "GET" && (path === "/api/auth/me" || path === "/api/auth/verify")) {
-      const session = auth.session(req);
+      const session = await auth.session(req);
       if (!session) {
         sendJson(res, 401, { error: "Não autenticado" });
         return;

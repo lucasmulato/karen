@@ -1,25 +1,31 @@
 /**
  * Self-hosted session authentication for KAREN.
  *
- * Passwords are scrypt-hashed in a file outside the repo. Sessions are HMAC-
- * signed, HttpOnly cookies. No plaintext passwords, no external dependency.
+ * Passwords are scrypt-hashed outside the repo. Sessions are HMAC-signed,
+ * HttpOnly cookies. Optional TOTP MFA and session revocation are supported.
  */
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, chmod } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type http from "node:http";
 
 const USERS_FILE = resolve(
   process.env.KAREN_USERS_FILE || "/home/admin/models/karen-users.json"
 );
+const FAILURES_FILE = resolve(
+  process.env.KAREN_AUTH_FAILURES || "/home/admin/karen/api/data/auth-failures.json"
+);
 const SECRET = process.env.KAREN_SESSION_SECRET || "karen-dev-secret-change-me";
 const COOKIE = "karen_session";
 const MAX_AGE = 7 * 24 * 60 * 60;
+const MFA_AGE = 5 * 60;
 
 interface User {
   username: string;
   salt: string;
   hash: string;
+  totpSecret?: string;
+  sessionVersion?: number;
 }
 
 const failures = new Map<string, { count: number; resetAt: number }>();
@@ -32,14 +38,14 @@ function sign(payload: string): string {
   return createHmac("sha256", SECRET).update(payload).digest("base64url");
 }
 
-function tokenFor(username: string): string {
+function tokenFor(username: string, version = 0, purpose = "session"): string {
   const payload = Buffer.from(
-    JSON.stringify({ u: username, exp: Date.now() + MAX_AGE * 1000 })
+    JSON.stringify({ u: username, v: version, p: purpose, exp: Date.now() + (purpose === "mfa" ? MFA_AGE : MAX_AGE) * 1000 })
   ).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
 
-function parseToken(token: string | undefined): User | null {
+function parseToken(token: string | undefined, purpose = "session"): { username: string; version: number } | null {
   if (!token) return null;
   const [payload, signature] = token.split(".");
   if (!payload || !signature) return null;
@@ -49,8 +55,8 @@ function parseToken(token: string | undefined): User | null {
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (!data.u || !data.exp || Date.now() > data.exp) return null;
-    return { username: data.u, salt: "", hash: "" };
+    if (!data.u || !data.exp || Date.now() > data.exp || data.p !== purpose) return null;
+    return { username: data.u, version: data.v ?? 0 };
   } catch {
     return null;
   }
@@ -81,24 +87,90 @@ function recordFailure(ip: string): void {
   const entry = failures.get(ip);
   if (!entry || entry.resetAt < now) failures.set(ip, { count: 1, resetAt: now + 15 * 60_000 });
   else entry.count++;
+  void logFailure(ip);
+}
+
+async function logFailure(ip: string): Promise<void> {
+  let list: { ip: string; at: string }[] = [];
+  try { list = JSON.parse(await readFile(FAILURES_FILE, "utf8")); } catch { /* ignore */ }
+  list.push({ ip, at: new Date().toISOString() });
+  await mkdir(dirname(FAILURES_FILE), { recursive: true });
+  await writeFile(FAILURES_FILE, JSON.stringify(list.slice(-100), null, 2), "utf8");
+}
+
+const BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+function base32(bytes: Buffer): string {
+  let bits = 0, value = 0, out = "";
+  for (const byte of bytes) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      out += BASE32[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) out += BASE32[(value << (5 - bits)) & 31];
+  return out;
+}
+function fromBase32(text: string): Buffer {
+  let bits = 0, value = 0;
+  const out: number[] = [];
+  for (const char of text.toUpperCase().replace(/=+$/, "")) {
+    const index = BASE32.indexOf(char);
+    if (index === -1) continue;
+    value = (value << 5) | index;
+    bits += 5;
+    if (bits >= 8) {
+      out.push((value >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(out);
+}
+function totp(secret: string, counter: number): string {
+  const buffer = Buffer.alloc(8);
+  buffer.writeBigUInt64BE(BigInt(counter));
+  const mac = createHmac("sha1", fromBase32(secret)).update(buffer).digest();
+  const offset = mac[mac.length - 1] & 15;
+  const code = ((mac[offset] & 127) << 24) | (mac[offset + 1] << 16) | (mac[offset + 2] << 8) | mac[offset + 3];
+  return String(code % 1_000_000).padStart(6, "0");
+}
+function verifyTotp(secret: string, code: string): boolean {
+  if (!/^\d{6}$/.test(code)) return false;
+  const counter = Math.floor(Date.now() / 30_000);
+  for (const delta of [-1, 0, 1]) {
+    if (totp(secret, counter + delta) === code) return true;
+  }
+  return false;
+}
+
+async function readUsers(): Promise<User[]> {
+  try { return JSON.parse(await readFile(USERS_FILE, "utf8")); } catch { return []; }
+}
+async function writeUsers(users: User[]): Promise<void> {
+  await mkdir(dirname(USERS_FILE), { recursive: true });
+  await writeFile(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
+  await chmod(USERS_FILE, 0o600);
+}
+
+export interface LoginResult {
+  token?: string;
+  mfaRequired?: boolean;
+  pendingToken?: string;
 }
 
 export class AuthService {
   async ensureAdmin(password: string): Promise<void> {
-    let users: User[] = [];
-    try { users = JSON.parse(await readFile(USERS_FILE, "utf8")); } catch { /* first run */ }
+    const users = await readUsers();
     if (users.some((u) => u.username === "karen")) return;
     const salt = randomBytes(16).toString("hex");
-    users.push({ username: "karen", salt, hash: hashPassword(password, salt) });
-    await mkdir(dirname(USERS_FILE), { recursive: true });
-    await writeFile(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
-    await chmod600(USERS_FILE);
+    users.push({ username: "karen", salt, hash: hashPassword(password, salt), sessionVersion: 0 });
+    await writeUsers(users);
   }
 
-  async login(username: string, password: string, ip: string): Promise<string | null> {
+  async login(username: string, password: string, ip: string): Promise<LoginResult | null> {
     if (rateLimited(ip)) return null;
-    let users: User[] = [];
-    try { users = JSON.parse(await readFile(USERS_FILE, "utf8")); } catch { return null; }
+    const users = await readUsers();
     const user = users.find((u) => u.username === username);
     if (!user) { recordFailure(ip); return null; }
     const actual = Buffer.from(hashPassword(password, user.salt), "hex");
@@ -108,11 +180,55 @@ export class AuthService {
       return null;
     }
     failures.delete(ip);
-    return tokenFor(username);
+    if (user.totpSecret) {
+      return { mfaRequired: true, pendingToken: tokenFor(username, user.sessionVersion ?? 0, "mfa") };
+    }
+    return { token: tokenFor(username, user.sessionVersion ?? 0) };
   }
 
-  session(req: http.IncomingMessage): User | null {
-    return parseToken(cookieValue(req, COOKIE));
+  async completeMfa(pendingToken: string, code: string): Promise<string | null> {
+    const parsed = parseToken(pendingToken, "mfa");
+    if (!parsed) return null;
+    const users = await readUsers();
+    const user = users.find((u) => u.username === parsed.username);
+    if (!user?.totpSecret || !verifyTotp(user.totpSecret, code)) return null;
+    return tokenFor(user.username, user.sessionVersion ?? 0);
+  }
+
+  async session(req: http.IncomingMessage): Promise<{ username: string } | null> {
+    const parsed = parseToken(cookieValue(req, COOKIE));
+    if (!parsed) return null;
+    const users = await readUsers();
+    const user = users.find((u) => u.username === parsed.username);
+    if (!user || (user.sessionVersion ?? 0) !== parsed.version) return null;
+    return { username: parsed.username };
+  }
+
+  async setupMfa(username: string): Promise<{ secret: string; uri: string } | null> {
+    const users = await readUsers();
+    const user = users.find((u) => u.username === username);
+    if (!user) return null;
+    const secret = base32(randomBytes(20));
+    user.totpSecret = secret;
+    await writeUsers(users);
+    const uri = `otpauth://totp/KAREN:${encodeURIComponent(username)}?secret=${secret}&issuer=KAREN&algorithm=SHA1&digits=6&period=30`;
+    return { secret, uri };
+  }
+
+  async enableMfa(username: string, code: string): Promise<boolean> {
+    const users = await readUsers();
+    const user = users.find((u) => u.username === username);
+    if (!user?.totpSecret || !verifyTotp(user.totpSecret, code)) return false;
+    await writeUsers(users);
+    return true;
+  }
+
+  async revokeAll(username: string): Promise<void> {
+    const users = await readUsers();
+    const user = users.find((u) => u.username === username);
+    if (!user) return;
+    user.sessionVersion = (user.sessionVersion ?? 0) + 1;
+    await writeUsers(users);
   }
 
   cookie(token: string): string {
@@ -122,9 +238,4 @@ export class AuthService {
   clearCookie(): string {
     return `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
   }
-}
-
-async function chmod600(path: string): Promise<void> {
-  const { chmod } = await import("node:fs/promises");
-  await chmod(path, 0o600);
 }

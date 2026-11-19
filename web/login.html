@@ -32,15 +32,22 @@
     <label for="password">Senha</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
     <button type="submit">Entrar</button>
+    <div id="mfa" style="display:none">
+      <label for="code">Código do autenticador</label>
+      <input id="code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code">
+      <button type="button" id="mfa-button">Confirmar código</button>
+    </div>
     <div class="error" id="error"></div>
     <a class="back" href="/">← Voltar</a>
   </form>
   <script>
+    let pendingToken = null;
+    const errorBox = document.getElementById('error');
+
     document.getElementById('login').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const button = e.target.querySelector('button');
-      const error = document.getElementById('error');
-      error.textContent = '';
+      const button = e.target.querySelector('button[type="submit"]');
+      errorBox.textContent = '';
       button.disabled = true;
       button.textContent = 'Entrando...';
       try {
@@ -52,15 +59,43 @@
             password: document.getElementById('password').value,
           }),
         });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || 'Falha no login');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Falha no login');
+        if (data.mfaRequired) {
+          pendingToken = data.pendingToken;
+          document.getElementById('mfa').style.display = 'block';
+          document.getElementById('code').focus();
+          button.disabled = false;
+          button.textContent = 'Entrar';
+          return;
         }
         window.location.href = '/app/';
       } catch (err) {
-        error.textContent = err.message;
+        errorBox.textContent = err.message;
         button.disabled = false;
         button.textContent = 'Entrar';
+      }
+    });
+
+    document.getElementById('mfa-button').addEventListener('click', async () => {
+      errorBox.textContent = '';
+      const button = document.getElementById('mfa-button');
+      button.disabled = true;
+      try {
+        const res = await fetch('/api/auth/mfa/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pendingToken,
+            code: document.getElementById('code').value.trim(),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Código inválido');
+        window.location.href = '/app/';
+      } catch (err) {
+        errorBox.textContent = err.message;
+        button.disabled = false;
       }
     });
   </script>

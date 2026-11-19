@@ -184,7 +184,7 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 ## Security & privacy
 
 - No token, password or API key is committed. Runtime secrets live in an env file outside the repo (`KAREN_API_KEY`, `APIFY_TOKEN`, …).
-- Remote access uses a session login (scrypt password hashes outside the repo, HMAC-signed HttpOnly/Secure cookies, 7-day expiry, login rate limiting) enforced by OpenResty `auth_request`. `X-Karen-Key` remains an internal defense; direct API-port access is firewalled.
+- Remote access uses a session login (scrypt password hashes outside the repo, optional TOTP MFA, HMAC-signed HttpOnly/Secure cookies, 7-day expiry, login rate limiting, global session revocation) enforced by OpenResty `auth_request`. `X-Karen-Key` remains an internal defense; direct API-port access is firewalled. Proposal links honour an `expires:` frontmatter date.
 - Only `/api/*` is proxied to the API; the MCP stdio surface remains local.
 - Commands are allowlisted, argument-free and spawned without a shell; mutating ones require human approval.
 - The markdown vault (`KAREN_VAULT_DIR`) is outside the repo; `MEMORY.md` is append-only and cannot be rewritten by the note editor.

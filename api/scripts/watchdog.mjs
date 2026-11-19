@@ -108,6 +108,23 @@ async function main() {
     ]));
   }
 
+  // Failed login attempts in the last 24h.
+  try {
+    const log = JSON.parse(
+      await readFile("/home/admin/karen/api/data/auth-failures.json", "utf8")
+    );
+    const recent = (log ?? []).filter(
+      (e) => Date.now() - Date.parse(e.at) < 86_400_000
+    );
+    if (recent.length >= 3) {
+      items.push(item("watchdog:auth-failures", `${recent.length} tentativas de login falhas em 24h`, [
+        "Revisar IPs em api/data/auth-failures.json.",
+        "Trocar a senha se não foram suas tentativas.",
+        "Considerar bloquear o IP no ufw.",
+      ]));
+    }
+  } catch { /* ignore */ }
+
   let existing = [];
   try { existing = JSON.parse(await readFile(ACTIONS, "utf8")); } catch { /* ignore */ }
   const byTopic = new Map(existing.map((a) => [a.topic, a]));

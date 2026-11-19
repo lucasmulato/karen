@@ -11,6 +11,9 @@ Public landing: `/`. Login page: `/login.html`. Protected app: `/app/`.
 - `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
 - Logout clears the cookie; to revoke a stolen token, rotate `KAREN_SESSION_SECRET` (invalidates every session).
 - `/portal/<token>` is intentionally public and does not use sessions. Every other `/api/*` route requires the session cookie via `auth_request`; only `/api/auth/login` and the internal `/api/auth/verify` are public. A 401 from any API call redirects the SPA to `/login.html`.
+- **MFA (TOTP)** is enabled for `karen`. Enroll with `POST /api/auth/mfa/setup` (returns a `otpauth://` URI) and confirm with `POST /api/auth/mfa/enable`. Login then returns `mfaRequired`, and `POST /api/auth/mfa/complete` exchanges the 6-digit code for the session cookie. The login page shows the code field automatically.
+- `POST /api/auth/revoke-all` increments the user's session version and invalidates every existing cookie. Rotating `KAREN_SESSION_SECRET` has the same global effect.
+- Failed logins are logged to `api/data/auth-failures.json`; the watchdog raises an e-mail action item after 3 in 24h.
 - Google OAuth can be added later behind the same auth layer.
 
 ## Verify the system
@@ -64,7 +67,8 @@ expires: 2026-12-31
 The public URL is `https://<host>/portal/<token>` — no Basic auth, no login.
 OpenResty disables auth for `/portal/` only; the API treats it as a public path.
 The page is `noindex` + `no-store` and exposes only that note. Rotate the token
-by changing the frontmatter. Bad tokens return 404.
+by changing the frontmatter. Bad tokens return 404. A past `expires:` date in
+the frontmatter also returns 404.
 
 ## Offsite backup
 
