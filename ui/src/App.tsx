@@ -232,7 +232,10 @@ const App: React.FC = () => {
             <Link2 size={24} />
           </button>
           <button
-            onClick={() => setShowChat((v) => !v)}
+            onClick={() => {
+              setShowChat((v) => !v);
+              setShowLeads(false);
+            }}
             className={`p-2 transition-colors ${
               showChat ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
             }`}
@@ -241,7 +244,10 @@ const App: React.FC = () => {
             <MessageSquare size={24} />
           </button>
           <button
-            onClick={() => setShowLeads((v) => !v)}
+            onClick={() => {
+              setShowLeads((v) => !v);
+              setShowChat(false);
+            }}
             className={`p-2 transition-colors ${
               showLeads ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
             }`}
@@ -258,7 +264,8 @@ const App: React.FC = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 relative">
+      <main className="flex-1 flex min-w-0 h-full">
+        <div className="relative flex-1 min-w-0 h-full">
         <header className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center pointer-events-none z-10">
           <div className="pointer-events-auto bg-black/50 backdrop-blur-md px-4 py-2 rounded-full border border-zinc-800 shadow-xl">
             <h1 className="text-sm font-medium tracking-wider uppercase text-zinc-400">
@@ -359,13 +366,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {showChat && (
-          <ChatPanel
-            onClose={() => setShowChat(false)}
-            onGraphChanged={refresh}
-          />
-        )}
-
         {showLeads && <LeadsPanel onClose={() => setShowLeads(false)} />}
 
         <GraphView
@@ -375,6 +375,16 @@ const App: React.FC = () => {
           highlightId={connect?.source ?? null}
           onNodeClick={handleNodeClick}
         />
+        </div>
+
+        {showChat && (
+          <aside className="w-full md:w-1/2 h-full shrink-0 border-l border-zinc-800 bg-black">
+            <ChatPanel
+              onClose={() => setShowChat(false)}
+              onGraphChanged={refresh}
+            />
+          </aside>
+        )}
       </main>
 
       {/* Detail Sidebar */}

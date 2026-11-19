@@ -66,8 +66,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
   }
 
   return (
-    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-full max-w-lg bg-black/95 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl flex flex-col h-[28rem]">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
+    <div className="flex h-full w-full flex-col bg-black">
+      <div className="flex shrink-0 items-center justify-between px-5 py-3 border-b border-zinc-800">
         <h2 className="text-sm font-semibold uppercase tracking-wide">
           KAREN
         </h2>
@@ -80,7 +80,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
         {configured === false && (
           <div className="text-xs text-zinc-400 bg-zinc-900/70 border border-zinc-800 rounded-lg p-3">
             Chat is disabled. Ask the API operator to set{' '}
@@ -108,7 +108,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onClose, onGraphChanged }) => {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={send} className="flex gap-2 px-4 py-3 border-t border-zinc-800">
+      <form onSubmit={send} className="flex shrink-0 gap-2 px-4 py-3 border-t border-zinc-800">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}

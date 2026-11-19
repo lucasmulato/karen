@@ -56,11 +56,9 @@ const GraphView: React.FC<GraphViewProps> = ({
   onNodePosition,
   highlightId,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const [dimensions, setDimensions] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   // Keep the latest callbacks without re-running the graph effect.
   const onNodeClickRef = useRef(onNodeClick);
@@ -73,11 +71,17 @@ const GraphView: React.FC<GraphViewProps> = ({
     onNodePositionRef.current = onNodePosition;
   }, [onNodePosition]);
 
+  // Track the pane, not the whole window: the chat panel can take half the
+  // screen, and the graph must resize to the space it actually has.
   useEffect(() => {
-    const onResize = () =>
-      setDimensions({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) setDimensions({ width, height });
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -256,7 +260,7 @@ const GraphView: React.FC<GraphViewProps> = ({
   }, [highlightId]);
 
   return (
-    <div className="w-full h-full bg-zinc-950">
+    <div ref={containerRef} className="w-full h-full bg-zinc-950">
       <svg ref={svgRef} className="w-full h-full" />
     </div>
   );
