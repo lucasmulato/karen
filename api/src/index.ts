@@ -20,6 +20,7 @@ import { VaultFsService } from "./services/vaultfs.js";
 import { GardenService } from "./services/garden.js";
 import { NoteLinksService } from "./services/notelinks.js";
 import { NoteGraphBridge } from "./services/notebridge.js";
+import { DashboardService } from "./services/dashboard.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -51,6 +52,7 @@ const notes = new VaultFsService();
 const garden = new GardenService(client);
 const noteLinks = new NoteLinksService(notes);
 const noteBridge = new NoteGraphBridge(client, notes, noteLinks);
+const dashboard = new DashboardService(client, notes);
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -676,6 +678,16 @@ async function handleHttp(
       const tag = url.searchParams.get("tag") ?? undefined;
       const context = url.searchParams.get("context") ?? undefined;
       sendJson(res, 200, await noteLinks.graph(type, tag, context));
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/dashboard/attention") {
+      sendJson(res, 200, await dashboard.attention());
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/dashboard/activity") {
+      sendJson(res, 200, { items: await dashboard.activity() });
       return;
     }
 

@@ -85,7 +85,8 @@ stdout/stderr and duration. The model never receives a shell.
 ### Assistant experience
 - Chat with quick prompts, durable memory in `MEMORY.md` (append-only) and tool calls.
 - Resizable side pane; `Esc` closes, `/` opens graph search.
-- Live health strip (API / model / DB / TLS) and toast notifications.
+- Live health strip (API / model / DB / TLS), an attention badge with real pending items, and a recent-activity feed on the Hub.
+- Tailwind v4 CSS-first design tokens, visible focus rings, container-query panes and reduced-motion support.
 
 ## Getting started
 
@@ -154,6 +155,7 @@ All ingest scripts are idempotent (deduplication by content hash).
 |---|---|---|
 | GET | `/api/health` | Liveness |
 | GET | `/api/health/full` | API / model / DB / TLS status |
+| GET | `/api/dashboard/attention`, `/api/dashboard/activity` | Pending items and recent events |
 | GET | `/api/graph` | Graph; `?exclude_notes=true` hides bridged/KB notes |
 | GET/POST | `/api/graph/canvas` | Export / import JSON Canvas |
 | POST/PATCH | `/api/nodes` | Create / patch a node |

@@ -30,6 +30,7 @@ import ToastHost from './components/ToastHost';
 import { toast } from './toast';
 
 import EvaPanel from './components/EvaPanel';
+import AttentionBadge from './components/AttentionBadge';
 
 const NotesPanel = React.lazy(() => import('./components/NotesPanel'));
 
@@ -338,7 +339,7 @@ const App: React.FC = () => {
         : 'Conectar: clique no nó de destino';
 
   return (
-    <div className="flex h-screen w-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
       {/* Navigation Sidebar */}
       <nav className="w-16 border-r border-zinc-800 flex flex-col items-center py-6 gap-8 bg-black">
         <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-500/20">
@@ -465,7 +466,7 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main
         ref={mainRef}
-        className="flex-1 flex min-w-0 h-full"
+        className="@container flex-1 flex min-w-0 h-full"
         style={{ '--chat-width': `${paneWidth}%` } as React.CSSProperties}
       >
         <div className="relative flex-1 min-w-0 h-full">
@@ -519,8 +520,12 @@ const App: React.FC = () => {
             </label>
           </div>
 
-          <div className="pointer-events-auto hidden pt-1 lg:block">
+          <div className="pointer-events-auto hidden items-center gap-2 pt-1 @4xl:flex">
             <HealthStrip />
+            <AttentionBadge />
+          </div>
+          <div className="pointer-events-auto @4xl:hidden">
+            <AttentionBadge />
           </div>
 
           {showSearch && (
@@ -659,7 +664,7 @@ const App: React.FC = () => {
             aria-label="Redimensionar painel"
             tabIndex={0}
             title="Arraste para redimensionar · duplo clique restaura 50% · setas ajustam"
-            className="hidden md:block w-1.5 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-600 focus:bg-blue-500 focus:outline-none transition-colors"
+            className="hidden @md:block w-1.5 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-600 focus:bg-blue-500 focus:outline-none transition-colors"
             onPointerDown={onDividerDown}
             onPointerMove={onDividerMove}
             onPointerUp={onDividerUp}
@@ -672,7 +677,7 @@ const App: React.FC = () => {
         )}
 
         {(showChat || showLeads || showCommands || showEva) && (
-          <aside className="w-full md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 md:border-l-0 bg-black">
+          <aside className="w-full @md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 @md:border-l-0 bg-black">
             {showChat && (
               <WorkspacePane
                 title="KAREN"

@@ -7,6 +7,7 @@ import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
 import { Eye, FileText, FolderOpen, Home, Leaf, Link2, Network, Pencil, Save, Share2 } from 'lucide-react';
 import { toast } from '../toast';
+import ActivityFeed from './ActivityFeed';
 
 interface GardenNote {
   id: string;
@@ -583,6 +584,8 @@ const NotesPanel: React.FC = () => {
                   <p className="text-xs text-zinc-600">Nenhuma nota com esses filtros.</p>
                 )}
               </section>
+               <ActivityFeed />
+
             </>
           ) : (
             <p className="text-xs text-zinc-500">Carregando hub...</p>

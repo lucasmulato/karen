@@ -1,25 +1,62 @@
 @import "tailwindcss";
 
+/* Tailwind v4 is CSS-first: design tokens live here, not in tailwind.config.js */
+@theme {
+  --color-ink-950: #09090b;
+  --color-ink-900: #18181b;
+  --color-ink-800: #27272a;
+  --color-ink-700: #3f3f46;
+  --color-accent: #3b82f6;
+  --color-ok: #22c55e;
+  --color-warn: #f59e0b;
+  --color-danger: #ef4444;
+  --color-focus: #60a5fa;
+  --radius-panel: 0.75rem;
+  --text-meta: 0.75rem;
+  --text-body: 0.8125rem;
+  --text-title: 0.875rem;
+}
+
 :root {
-  background-color: #09090b;
+  background-color: var(--color-ink-950);
   color: #fafafa;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
   margin: 0;
-  overflow: hidden;
 }
 
+/* Visible keyboard focus everywhere (WCAG 2.4.13 / 1.4.11). */
+*:focus-visible {
+  outline: 2px solid var(--color-focus) !important;
+  outline-offset: 2px !important;
+}
+
+/* Graph nodes: CSS transform instead of the SVG `r` geometry property. */
 .node {
   cursor: pointer;
-  transition: r 0.2s ease-in-out;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 150ms ease-out;
 }
-
 .node:hover {
-  r: 10;
+  transform: scale(1.25);
 }
 
 .link {
   stroke-opacity: 0.6;
   stroke-width: 1.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
