@@ -239,6 +239,11 @@ The notebook button opens a resizable pane with three tabs:
 - **Jardim**: maturity counts plus orphan/stale notes from `GET /api/garden/data`; "Abrir / criar" opens the matching vault note or creates a stub.
 - **Canvas**: renders the exported graph from `GET /api/graph/canvas` with pan/zoom (custom renderer for JSON Canvas 1.0).
 
+The **Hub** tab is the landing view: type/tag filters, note stats, most-linked
+notes and clickable `[[wikilinks]]` in read mode (with a backlinks panel).
+`GET /api/notes/graph` and `/api/notes/backlinks` parse frontmatter, `#tags` and
+wikilinks on demand from the plain markdown vault.
+
 See `docs/notes-ui-references.md` for the free/MIT projects evaluated.
 
 ### Persistent memory (markdown vault)

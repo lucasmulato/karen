@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import CanvasView from './CanvasView';
+import MarkdownRead from './MarkdownRead';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
-import { FileText, FolderOpen, Leaf, Network, Save } from 'lucide-react';
+import { Eye, FileText, FolderOpen, Home, Leaf, Link2, Network, Pencil, Save } from 'lucide-react';
 import { toast } from '../toast';
 
 interface GardenNote {
@@ -24,7 +25,30 @@ interface GardenData {
 }
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
-type Tab = 'files' | 'garden' | 'canvas';
+type Tab = 'hub' | 'files' | 'garden' | 'canvas';
+
+interface NoteNode {
+  path: string;
+  name: string;
+  type: string;
+  tags: string[];
+  maturity: string;
+  graphId: string | null;
+  links: string[];
+  backlinks: string[];
+}
+interface NoteGraph {
+  nodes: NoteNode[];
+  edges: { source: string; target: string }[];
+  stats: {
+    total: number;
+    linked: number;
+    orphan: number;
+    mostLinked: { path: string; name: string; count: number }[];
+    types: { type: string; count: number }[];
+    tags: { tag: string; count: number }[];
+  };
+}
 
 function slug(name: string): string {
   return name
@@ -37,7 +61,7 @@ function slug(name: string): string {
 }
 
 const NotesPanel: React.FC = () => {
-  const [tab, setTab] = useState<Tab>('files');
+  const [tab, setTab] = useState<Tab>('hub');
   const [files, setFiles] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [content, setContent] = useState('');
@@ -47,6 +71,11 @@ const NotesPanel: React.FC = () => {
   const [garden, setGarden] = useState<GardenData | null>(null);
   const [maturity, setMaturity] = useState('all');
   const [canvas, setCanvas] = useState<any>(null);
+  const [noteGraph, setNoteGraph] = useState<NoteGraph | null>(null);
+  const [typeFilter, setTypeFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
+  const [readMode, setReadMode] = useState(false);
+  const [backlinks, setBacklinks] = useState<NoteNode[]>([]);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -61,6 +90,33 @@ const NotesPanel: React.FC = () => {
   useEffect(() => {
     loadFiles();
   }, [loadFiles]);
+
+  const loadGraph = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (typeFilter) params.set('type', typeFilter);
+      if (tagFilter) params.set('tag', tagFilter);
+      const res = await fetch(`${API_BASE}/notes/graph?${params}`);
+      setNoteGraph(await res.json());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [typeFilter, tagFilter]);
+
+  useEffect(() => {
+    if (tab === 'hub') loadGraph();
+  }, [tab, loadGraph]);
+
+  useEffect(() => {
+    if (!selected) {
+      setBacklinks([]);
+      return;
+    }
+    fetch(`${API_BASE}/notes/backlinks?path=${encodeURIComponent(selected)}`)
+      .then((r) => r.json())
+      .then((d) => setBacklinks(d.backlinks ?? []))
+      .catch(() => setBacklinks([]));
+  }, [selected, dirty]);
 
   async function openFile(path: string) {
     setError('');
@@ -179,6 +235,12 @@ const NotesPanel: React.FC = () => {
       <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-4 py-2">
         <div className="flex gap-1">
           <button
+            onClick={() => changeTab('hub')}
+            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'hub' ? 'bg-zinc-800 text-blue-400' : 'text-zinc-500 hover:text-zinc-200'}`}
+          >
+            <Home size={14} /> Hub
+          </button>
+          <button
             onClick={() => changeTab('files')}
             className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'files' ? 'bg-zinc-800 text-blue-400' : 'text-zinc-500 hover:text-zinc-200'}`}
           >
@@ -198,7 +260,25 @@ const NotesPanel: React.FC = () => {
           </button>
         </div>
         <div className="flex items-center gap-2">
-          {tab === 'files' && (
+          {tab === 'files' && selected && (
+            <div className="flex overflow-hidden rounded-lg border border-zinc-700">
+              <button
+                onClick={() => setReadMode(false)}
+                className={`flex items-center gap-1 px-2 py-1 text-[11px] ${!readMode ? 'bg-zinc-800 text-blue-300' : 'text-zinc-500'}`}
+                title="Editar"
+              >
+                <Pencil size={11} /> Editar
+              </button>
+              <button
+                onClick={() => setReadMode(true)}
+                className={`flex items-center gap-1 px-2 py-1 text-[11px] ${readMode ? 'bg-zinc-800 text-blue-300' : 'text-zinc-500'}`}
+                title="Ler"
+              >
+                <Eye size={11} /> Ler
+              </button>
+            </div>
+          )}
+          {tab === 'files' && !readMode && (
             <button
               onClick={save}
               disabled={!dirty || saving}
@@ -213,6 +293,110 @@ const NotesPanel: React.FC = () => {
       {error && (
         <div className="shrink-0 border-b border-red-900/50 bg-red-950/30 px-4 py-2 text-[12px] text-red-300">
           {error}
+        </div>
+      )}
+
+      {tab === 'hub' && (
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+          {noteGraph ? (
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  ['Notas', noteGraph.stats.total, 'text-zinc-100'],
+                  ['Conectadas', noteGraph.stats.linked, 'text-blue-400'],
+                  ['Órfãs', noteGraph.stats.orphan, 'text-amber-400'],
+                ].map(([label, value, color]) => (
+                  <div key={String(label)} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                    <div className={`text-xl font-semibold ${color}`}>{value}</div>
+                    <div className="text-[11px] uppercase tracking-wider text-zinc-500">{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Filtrar por tipo</p>
+                  {(typeFilter || tagFilter) && (
+                    <button
+                      onClick={() => { setTypeFilter(''); setTagFilter(''); }}
+                      className="text-[11px] text-zinc-500 hover:text-blue-400"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {noteGraph.stats.types.map((t) => (
+                    <button
+                      key={t.type}
+                      onClick={() => setTypeFilter((v) => (v === t.type ? '' : t.type))}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] ${typeFilter === t.type ? 'border-blue-500 text-blue-400' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}
+                    >
+                      {t.type} <span className="text-zinc-600">{t.count}</span>
+                    </button>
+                  ))}
+                </div>
+                {noteGraph.stats.tags.length > 0 && (
+                  <>
+                    <p className="pt-1 text-[11px] font-bold uppercase tracking-widest text-zinc-500">Tags</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {noteGraph.stats.tags.map((t) => (
+                        <button
+                          key={t.tag}
+                          onClick={() => setTagFilter((v) => (v === t.tag ? '' : t.tag))}
+                          className={`rounded-full border px-2.5 py-1 text-[11px] ${tagFilter === t.tag ? 'border-emerald-500 text-emerald-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
+                        >
+                          #{t.tag} <span className="text-zinc-600">{t.count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {noteGraph.stats.mostLinked.some((n) => n.count > 0) && (
+                <section className="space-y-1.5">
+                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+                    <Link2 size={12} /> Mais conectadas
+                  </p>
+                  {noteGraph.stats.mostLinked.filter((n) => n.count > 0).map((n) => (
+                    <button
+                      key={n.path}
+                      onClick={() => openFile(n.path)}
+                      className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-left hover:border-blue-600"
+                    >
+                      <span className="truncate text-xs text-zinc-200">{n.name}</span>
+                      <span className="ml-2 shrink-0 text-[11px] text-blue-400">{n.count} links</span>
+                    </button>
+                  ))}
+                </section>
+              )}
+
+              <section className="space-y-1.5">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Notas</p>
+                {noteGraph.nodes.map((n) => (
+                  <button
+                    key={n.path}
+                    onClick={() => openFile(n.path)}
+                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-left hover:border-blue-600"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs text-zinc-200">{n.name}</span>
+                      <span className="block text-[11px] text-zinc-600">
+                        {n.type} · {n.backlinks.length} backlinks · {n.links.length} links
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-[10px] text-zinc-600">{n.path.split('/')[0]}</span>
+                  </button>
+                ))}
+                {noteGraph.nodes.length === 0 && (
+                  <p className="text-xs text-zinc-600">Nenhuma nota com esses filtros.</p>
+                )}
+              </section>
+            </>
+          ) : (
+            <p className="text-xs text-zinc-500">Carregando hub...</p>
+          )}
         </div>
       )}
 
@@ -233,22 +417,50 @@ const NotesPanel: React.FC = () => {
             ))}
             {files.length === 0 && <p className="px-1 text-[12px] text-zinc-600">Nenhuma nota.</p>}
           </aside>
-          <div className="min-w-0 flex-1 overflow-hidden">
-            {selected ? (
-              <MDEditor
-                value={content}
-                onChange={(v) => {
-                  setContent(v ?? '');
-                  setDirty(true);
-                }}
-                height="100%"
-                visibleDragbar={false}
-                textareaProps={{ spellCheck: false }}
-              />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-2 text-zinc-600">
-                <FileText size={28} />
-                <p className="text-xs">Selecione uma nota para editar</p>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {selected ? (
+                readMode ? (
+                  <MarkdownRead content={content} files={files} onOpen={openFile} />
+                ) : (
+                  <MDEditor
+                    value={content}
+                    onChange={(v) => {
+                      setContent(v ?? '');
+                      setDirty(true);
+                    }}
+                    height="100%"
+                    visibleDragbar={false}
+                    textareaProps={{ spellCheck: false }}
+                  />
+                )
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-zinc-600">
+                  <FileText size={28} />
+                  <p className="text-xs">Selecione uma nota para editar</p>
+                </div>
+              )}
+            </div>
+            {selected && (
+              <div className="max-h-36 shrink-0 overflow-y-auto border-t border-zinc-800 bg-zinc-950 px-3 py-2">
+                <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+                  <Link2 size={12} /> Backlinks ({backlinks.length})
+                </p>
+                {backlinks.map((b) => (
+                  <button
+                    key={b.path}
+                    onClick={() => openFile(b.path)}
+                    className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-[12px] text-zinc-300 hover:bg-zinc-900"
+                  >
+                    <span className="truncate">{b.name}</span>
+                    <span className="ml-2 shrink-0 text-[11px] text-zinc-600">{b.type}</span>
+                  </button>
+                ))}
+                {backlinks.length === 0 && (
+                  <p className="text-[11px] text-zinc-600">
+                    Nenhuma nota aponta aqui. Use [[Nome da Nota]] em outra nota.
+                  </p>
+                )}
               </div>
             )}
           </div>

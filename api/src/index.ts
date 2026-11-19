@@ -17,6 +17,7 @@ import { CommandService } from "./services/commands.js";
 import { CanvasService } from "./services/canvas.js";
 import { VaultFsService } from "./services/vaultfs.js";
 import { GardenService } from "./services/garden.js";
+import { NoteLinksService } from "./services/notelinks.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -46,6 +47,7 @@ const commands = new CommandService(client);
 const canvas = new CanvasService(client, vault);
 const notes = new VaultFsService();
 const garden = new GardenService(client);
+const noteLinks = new NoteLinksService(notes);
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -649,6 +651,19 @@ async function handleHttp(
     }
 
     // --- Markdown vault / persistent memory ----------------------------------
+    if (req.method === "GET" && path === "/api/notes/graph") {
+      const type = url.searchParams.get("type") ?? undefined;
+      const tag = url.searchParams.get("tag") ?? undefined;
+      sendJson(res, 200, await noteLinks.graph(type, tag));
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/notes/backlinks") {
+      const notePath = url.searchParams.get("path") ?? "";
+      sendJson(res, 200, { backlinks: await noteLinks.backlinks(notePath) });
+      return;
+    }
+
     if (req.method === "GET" && path === "/api/notes") {
       sendJson(res, 200, { root: notes.root, files: await notes.list() });
       return;
