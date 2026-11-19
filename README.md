@@ -195,6 +195,7 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 - Watchdog (`karen-watchdog.timer`, hourly): failed units, stale backups, disk, cert expiry and model health become e-mail action items.
 - Monthly OS update check (`karen-osupdates.timer`) raises an e-mail item instead of upgrading automatically.
 - Optional offsite backup (`karen-offsite.timer`, 04:00): AES-256 encrypted copies pushed to a private git repo (see `docs/OPERATIONS.md`).
+- EVA weekly strategy review (`karen-eva-weekly.timer`, Monday 10:00): decision-format e-mail with ranked opportunities, open actions, note health and decision history.
 - Weekly dependency audit (`karen-audit.timer`, Monday 08:30 `America/São_Paulo`): writes `api/data/dependency-audit.json` and raises an e-mail action item when high/critical advisories exist. Never auto-upgrades packages.
 - Daily credit/opportunity scan at 09:00 `America/São_Paulo` (`karen-morning.timer`), with a deterministic e-mail digest.
 - Hourly action alerts (`karen-alerts.timer`) for source changes, approaching deadlines and missing critical keys, with a 24h per-topic cooldown. SMTP is required for real delivery; setup steps are recorded in `api/data/email-setup-pending.md`.

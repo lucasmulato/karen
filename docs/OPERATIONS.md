@@ -21,6 +21,7 @@ curl -s http://127.0.0.1:3000/api/health/full
 | `karen-watchdog` | hourly | units, backup age, disk, cert, llama |
 | `karen-backup` | daily 03:00 | Postgres dump + vault tar, 7-day retention |
 | `karen-audit` | Monday 08:30 | npm audit report |
+| `karen-eva-weekly` | Monday 10:00 | EVA strategy-review e-mail |
 
 Run one manually: `sudo systemctl start <name>.service`. Logs:
 `journalctl -u <name>.service -n 50`.
