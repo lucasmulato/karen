@@ -165,14 +165,15 @@ const GraphView: React.FC<GraphViewProps> = ({
       .attr('stroke', (d) => (d.id === highlightId ? '#ffffff' : 'none'))
       .attr('stroke-width', (d) => (d.id === highlightId ? 2 : 0))
       .attr('cursor', 'pointer')
-      .call((selection) => {
-        d3
+      // d3's types disagree on the selection element type here; at runtime
+      // drag(selection) is the correct contract, so cast the behavior.
+      .call(
+        (d3
           .drag<SVGCircleElement, GraphNode>()
           .on('start', dragstarted)
           .on('drag', dragged)
-          .on('end', dragended)
-          .call(selection);
-      })
+          .on('end', dragended) as any)
+      )
       .on('click', (event, d) => {
         event.stopPropagation();
         onNodeClickRef.current?.(d);
