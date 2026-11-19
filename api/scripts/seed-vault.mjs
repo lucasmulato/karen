@@ -4,11 +4,39 @@
  * Safe to re-run: existing notes are never overwritten.
  */
 import { mkdir, writeFile, access } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 
 const ROOT = resolve(process.env.KAREN_VAULT_DIR ?? "/home/admin/models/karen-vault");
 
+const DEMO_PORTAL_TOKEN = randomBytes(18).toString("hex");
+
 const NOTES = {
+  "proposals/Empresa Exemplo.md": `---
+type: proposal
+token: ${DEMO_PORTAL_TOKEN}
+client: Empresa Exemplo
+status: enviada
+expires: 2026-12-31
+---
+# Proposta — Empresa Exemplo
+
+Olá! Esta é uma proposta preparada pela KAREN para a Empresa Exemplo.
+
+## O que propomos
+
+- Diagnóstico rápido de presença digital
+- Cardápio/site leve e rápido
+- Acompanhamento por 30 dias
+
+## Próximos passos
+
+1. Confirmar o escopo com o operador.
+2. Aprovar o valor e o prazo.
+3. Receber o link de publicação.
+
+Valor e prazo serão confirmados diretamente com o operador antes de qualquer cobrança.
+`,
   "30 Resources/Metodo Zettelkasten.md": `---
 type: resource
 tags: [second-brain, metodo]

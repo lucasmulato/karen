@@ -17,6 +17,7 @@ const ALLOWED_DIRS = new Set([
   "30 Resources",
   "40 Archive",
   "decisions",
+  "proposals",
   "people",
   "projects",
 ]);

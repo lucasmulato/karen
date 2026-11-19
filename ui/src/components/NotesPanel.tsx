@@ -441,6 +441,23 @@ const NotesPanel: React.FC = () => {
               </button>
             </div>
           )}
+          {tab === 'files' && selected?.startsWith('proposals/') && (
+            <button
+              onClick={async () => {
+                const res = await fetch(`${API_BASE}/notes/content?path=${encodeURIComponent(selected)}`);
+                const data = await res.json();
+                const token = String(data.content ?? '').match(/^token:\s*([a-f0-9]+)/im)?.[1];
+                if (token) {
+                  await navigator.clipboard.writeText(`${window.location.origin}/portal/${token}`);
+                  toast('Link da proposta copiado');
+                } else toast('Proposta sem token no frontmatter');
+              }}
+              className="flex items-center gap-1 rounded border border-emerald-700 px-2.5 py-1 text-[12px] text-emerald-300 hover:border-emerald-500"
+              title="Copiar link público da proposta"
+            >
+              <Link2 size={12} /> Link público
+            </button>
+          )}
           {tab === 'files' && !readMode && (
             <button
               onClick={() => save()}

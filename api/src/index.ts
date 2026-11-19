@@ -21,6 +21,7 @@ import { GardenService } from "./services/garden.js";
 import { NoteLinksService } from "./services/notelinks.js";
 import { NoteGraphBridge } from "./services/notebridge.js";
 import { DashboardService } from "./services/dashboard.js";
+import { PortalService } from "./services/portal.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -53,6 +54,7 @@ const garden = new GardenService(client);
 const noteLinks = new NoteLinksService(notes);
 const noteBridge = new NoteGraphBridge(client, notes, noteLinks);
 const dashboard = new DashboardService(client, notes);
+const portal = new PortalService(notes);
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -398,7 +400,8 @@ async function handleHttp(
   // requests; direct :3000 access is blocked by the firewall. /api/health
   // stays public for monitoring.
   const apiKey = process.env.KAREN_API_KEY?.trim();
-  if (apiKey && path !== "/api/health" && req.headers["x-karen-key"] !== apiKey) {
+  const publicPath = path === "/api/health" || path.startsWith("/portal/");
+  if (apiKey && !publicPath && req.headers["x-karen-key"] !== apiKey) {
     sendJson(res, 401, { error: "Unauthorized" });
     return;
   }
@@ -419,6 +422,22 @@ async function handleHttp(
   }
 
   try {
+    if (req.method === "GET" && path.startsWith("/portal/")) {
+      const token = path.slice("/portal/".length);
+      const proposal = await portal.findByToken(token);
+      if (!proposal) {
+        sendJson(res, 404, { error: "Proposta não encontrada" });
+        return;
+      }
+      res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex, nofollow",
+      });
+      res.end(portal.render(proposal));
+      return;
+    }
+
     if (req.method === "GET" && path === "/api/health") {
       sendJson(res, 200, { status: "ok" });
       return;

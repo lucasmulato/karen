@@ -201,6 +201,14 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 - Hourly action alerts (`karen-alerts.timer`) for source changes, approaching deadlines and missing critical keys, with a 24h per-topic cooldown. SMTP is required for real delivery; setup steps are recorded in `api/data/email-setup-pending.md`.
 - Working contexts (`context:` frontmatter, `CONTEXT.md`, `set_context` / `get_context`) shared by the Hub, Mapa and the assistant.
 
+## Client proposal portal
+
+A note in `proposals/` with a `token:` in its frontmatter becomes a private,
+read-only page at `/portal/<token>`. No login, no database access, no other vault
+content is exposed. The page is `noindex`/`no-store`; rotate the token by editing
+the frontmatter. The Notes panel offers **Link público** to copy the URL. See
+`docs/OPERATIONS.md`.
+
 ## EVA — co-founder mode
 
 `EVA` is a second persona for KAREN, not a second app. Toggle it in the sidebar

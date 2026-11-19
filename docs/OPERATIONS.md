@@ -37,6 +37,25 @@ cat data/restore-drill.json
 The drill never touches production. To do a real restore, stop the API, replace
 the database from the chosen dump, then restart and check `/api/health/full`.
 
+## Client proposal portal
+
+Create `proposals/<Cliente>.md` in the vault with frontmatter:
+
+```yaml
+---
+type: proposal
+token: <random-hex>
+client: Nome do Cliente
+status: enviada
+expires: 2026-12-31
+---
+```
+
+The public URL is `https://<host>/portal/<token>` — no Basic auth, no login.
+OpenResty disables auth for `/portal/` only; the API treats it as a public path.
+The page is `noindex` + `no-store` and exposes only that note. Rotate the token
+by changing the frontmatter. Bad tokens return 404.
+
 ## Offsite backup
 
 Encrypted copies of the newest dump + vault archive are pushed daily (04:00) to
