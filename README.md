@@ -220,6 +220,22 @@ The env file is `/home/admin/models/karen.env` (mode 600, outside the repo).
 Only `/api/*` is proxied; the MCP stdio surface stays local. A scrape can take
 minutes, so the button shows a spinner while the browser waits.
 
+### Second-brain sources (all free / MIT)
+
+KAREN's note conventions and graph portability draw on public work, credited
+here rather than vendored:
+
+- [kepano/kepano-obsidian](https://github.com/kepano/kepano-obsidian) — vault structure.
+- [groepl/Obsidian-Templates](https://github.com/groepl/Obsidian-Templates) — Zettelkasten templates.
+- [MaggieAppleton/digital-gardeners](https://github.com/MaggieAppleton/digital-gardeners) — compounding notes.
+- [obsidianmd/jsoncanvas](https://github.com/obsidianmd/jsoncanvas) — MIT, JSON Canvas 1.0 spec used by `/api/graph/canvas`.
+- [obsidianmd/obsidian-releases](https://github.com/obsidianmd/obsidian-releases) — plugin/theme catalog, linked only (no license).
+- [obsidianmd/obsidian-sample-plugin](https://github.com/obsidianmd/obsidian-sample-plugin) — 0BSD, future plugin starter.
+- [Ar9av/obsidian-wiki](https://github.com/Ar9av/obsidian-wiki) — agent memory conventions (planned).
+
+The graph can be exported as `karen-graph.canvas` and re-imported; positions
+and edge labels round-trip. No Obsidian installation is required.
+
 ## Development
 
 - **Lint**: `cd ui && npm run lint`

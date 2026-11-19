@@ -13,6 +13,7 @@ import { EmbeddingService, embeddingConfigFromEnv } from "./services/embeddings.
 import { leadProviderFromEnv } from "./services/providers.js";
 import { LeadService } from "./services/leads.js";
 import { CommandService } from "./services/commands.js";
+import { CanvasService } from "./services/canvas.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -39,6 +40,7 @@ const vault = new VaultService(client, embeddings);
 // KAREN lead engine. Cloud Apify keeps the token server-side; when unconfigured
 // the endpoints return a clear 503 instead of failing at request time.
 const commands = new CommandService(client);
+const canvas = new CanvasService(client, vault);
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -292,6 +294,36 @@ const approvalSchema = z.object({
   token: z.string().min(10).max(200),
 });
 
+const canvasImportSchema = z.object({
+  nodes: z
+    .array(
+      z
+        .object({
+          id: z.string(),
+          type: z.string(),
+          x: z.number(),
+          y: z.number(),
+          text: z.string(),
+        })
+        .passthrough()
+    )
+    .max(1000)
+    .default([]),
+  edges: z
+    .array(
+      z
+        .object({
+          id: z.string().optional(),
+          fromNode: z.string(),
+          toNode: z.string(),
+          label: z.string().optional(),
+        })
+        .passthrough()
+    )
+    .max(4000)
+    .default([]),
+});
+
 // Simple fixed-window per-IP limiter for mutating requests.
 const RATE_LIMIT = { windowMs: 60_000, max: 60 };
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
@@ -523,6 +555,36 @@ async function handleHttp(
         return;
       }
       sendJson(res, 200, row);
+      return;
+    }
+
+    // --- JSON Canvas portability ---------------------------------------------
+    if (req.method === "GET" && path === "/api/graph/canvas") {
+      const data = await canvas.export();
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Content-Disposition": 'attachment; filename="karen-graph.canvas"',
+      });
+      res.end(JSON.stringify(data));
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/graph/canvas/import") {
+      if (isRateLimited(req.socket.remoteAddress ?? "unknown")) {
+        sendJson(res, 429, { error: "Too many requests" });
+        return;
+      }
+      const parsed = canvasImportSchema.safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      try {
+        const result = await canvas.import(parsed.data as any);
+        sendJson(res, 200, result);
+      } catch (err: any) {
+        sendJson(res, 400, { error: err.message });
+      }
       return;
     }
 

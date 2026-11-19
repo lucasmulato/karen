@@ -202,6 +202,15 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_note_guidelines",
+      description:
+        "Retorna as convenções de notas (Zettelkasten + jardim digital). Use antes de criar ou revisar notas, findings ou writeups.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 ];
 
 export interface ChatResult {
@@ -371,6 +380,13 @@ export class GraphAgent {
         if (!this.commands) throw new Error("Comandos não disponíveis.");
         const result = await this.commands.request(String(args.commandId ?? ""), "agent");
         return JSON.stringify(result);
+      }
+      case "get_note_guidelines": {
+        try {
+          return readFileSync(new URL("../../prompts/notes.md", import.meta.url), "utf8").trim();
+        } catch {
+          return "Notas atômicas, uma ideia por nota, links explícitos e maturity seedling → budding → evergreen.";
+        }
       }
       default:
         throw new Error(`Unknown tool: ${call.function.name}`);

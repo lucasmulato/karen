@@ -5,9 +5,11 @@ import GraphView, {
 } from './components/GraphView';
 import {
   Brain,
+  Download,
   Plus,
   Search,
   Settings,
+  Upload,
   MessageSquare,
   Link2,
   MapPin,
@@ -83,6 +85,43 @@ const App: React.FC = () => {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  async function exportCanvas() {
+    try {
+      const res = await fetch(`${API_BASE}/graph/canvas`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'karen-graph.canvas';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Canvas export failed:', err);
+    }
+  }
+
+  async function importCanvas(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const res = await fetch(`${API_BASE}/graph/canvas/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: text,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      await refresh();
+      window.alert(`Canvas importado: ${data.imported} nós, ${data.edges} arestas.`);
+    } catch (err) {
+      window.alert(`Falha ao importar: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      e.target.value = '';
+    }
+  }
 
   function handleAddNode(e: React.FormEvent) {
     e.preventDefault();
@@ -285,11 +324,30 @@ const App: React.FC = () => {
       <main className="flex-1 flex min-w-0 h-full">
         <div className="relative flex-1 min-w-0 h-full">
         <header className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center pointer-events-none z-10">
-          <div className="pointer-events-auto bg-black/50 backdrop-blur-md px-4 py-2 rounded-full border border-zinc-800 shadow-xl">
+          <div className="pointer-events-auto flex items-center gap-3 bg-black/50 backdrop-blur-md px-4 py-2 rounded-full border border-zinc-800 shadow-xl">
             <h1 className="text-sm font-medium tracking-wider uppercase text-zinc-400">
               KAREN <span className="text-zinc-600 px-2">//</span>{' '}
               <span className="text-blue-400">Cyber &amp; Leads</span>
             </h1>
+            <button
+              onClick={exportCanvas}
+              className="text-zinc-500 hover:text-blue-400 transition-colors"
+              title="Exportar grafo como .canvas (JSON Canvas)"
+            >
+              <Download size={15} />
+            </button>
+            <label
+              className="text-zinc-500 hover:text-blue-400 transition-colors cursor-pointer"
+              title="Importar arquivo .canvas"
+            >
+              <Upload size={15} />
+              <input
+                type="file"
+                accept=".canvas,application/json"
+                className="hidden"
+                onChange={importCanvas}
+              />
+            </label>
           </div>
         </header>
 
