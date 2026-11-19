@@ -53,11 +53,11 @@ const GraphSearch: React.FC<{
           placeholder="Buscar nós do grafo..."
           className="w-48 bg-transparent text-xs text-zinc-200 outline-none placeholder:text-zinc-600"
         />
-        <button onClick={onClose} className="text-[10px] text-zinc-500 hover:text-zinc-200">ESC</button>
+        <button onClick={onClose} className="text-[11px] text-zinc-500 hover:text-zinc-200">ESC</button>
       </div>
       {(results.length > 0 || loading) && (
         <div className="absolute left-0 right-0 top-full mt-1 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 shadow-2xl">
-          {loading && <p className="px-3 py-2 text-[11px] text-zinc-500">Buscando...</p>}
+          {loading && <p className="px-3 py-2 text-[12px] text-zinc-500">Buscando...</p>}
           {!loading && results.map((r) => (
             <button
               key={r.id}
@@ -65,11 +65,11 @@ const GraphSearch: React.FC<{
               className="flex w-full flex-col items-start gap-0.5 border-b border-zinc-900 px-3 py-2 text-left last:border-0 hover:bg-zinc-900"
             >
               <span className="truncate text-xs text-zinc-200">{r.name}</span>
-              <span className="text-[10px] text-zinc-500">[{r.type}]</span>
+              <span className="text-[11px] text-zinc-500">[{r.type}]</span>
             </button>
           ))}
           {!loading && query.trim().length >= 2 && results.length === 0 && (
-            <p className="px-3 py-2 text-[11px] text-zinc-500">Nenhum nó encontrado.</p>
+            <p className="px-3 py-2 text-[12px] text-zinc-500">Nenhum nó encontrado.</p>
           )}
         </div>
       )}

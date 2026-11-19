@@ -241,7 +241,7 @@ const LeadsPanel: React.FC = () => {
           </div>
         )}
         <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-[11px] text-zinc-500">
+          <label className="flex flex-col gap-1 text-[12px] text-zinc-500">
             Busca
             <input
               value={query}
@@ -250,7 +250,7 @@ const LeadsPanel: React.FC = () => {
               className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </label>
-          <label className="flex flex-col gap-1 text-[11px] text-zinc-500">
+          <label className="flex flex-col gap-1 text-[12px] text-zinc-500">
             Localização
             <input
               value={location}
@@ -261,7 +261,7 @@ const LeadsPanel: React.FC = () => {
           </label>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <label className="flex flex-col gap-1 text-[11px] text-zinc-500">
+          <label className="flex flex-col gap-1 text-[12px] text-zinc-500">
             Máx. lugares
             <input
               type="number"
@@ -272,7 +272,7 @@ const LeadsPanel: React.FC = () => {
               className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </label>
-          <label className="flex flex-col gap-1 text-[11px] text-zinc-500">
+          <label className="flex flex-col gap-1 text-[12px] text-zinc-500">
             Zoom (opcional)
             <input
               type="number"
@@ -284,7 +284,7 @@ const LeadsPanel: React.FC = () => {
               className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </label>
-          <label className="flex flex-col gap-1 text-[11px] text-zinc-500">
+          <label className="flex flex-col gap-1 text-[12px] text-zinc-500">
             Website
             <select
               value={website}
@@ -298,7 +298,7 @@ const LeadsPanel: React.FC = () => {
           </label>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[11px] text-zinc-500">
+          <span className="text-[12px] text-zinc-500">
             Custo estimado: <span className="text-zinc-300">US$ {estimate?.toFixed(3) ?? '—'}</span>
             {' '}(add-ons desligados)
           </span>
@@ -316,7 +316,7 @@ const LeadsPanel: React.FC = () => {
       {error && (
         <div className="mx-5 mt-3 text-xs text-red-300 bg-red-950/40 border border-red-800/50 rounded-lg p-3 shrink-0">
           {error}
-          <p className="mt-1 text-[10px] text-red-400/70">
+          <p className="mt-1 text-[11px] text-red-400/70">
             Os dados vêm do OpenStreetMap (grátis). Se o serviço estiver ocupado,
             a KAREN tenta outros servidores e você pode repetir em instantes.
           </p>
@@ -332,7 +332,7 @@ const LeadsPanel: React.FC = () => {
         )}
         {result && (
           <>
-            <div className="flex items-center justify-between text-[11px] text-zinc-400 flex-wrap gap-2">
+            <div className="flex items-center justify-between text-[12px] text-zinc-400 flex-wrap gap-2">
               <span>
                 {result.found} encontrados · {result.added} novos · {result.deduped} já salvos
                 {result.suppressed > 0 ? ` · ${result.suppressed} sem interesse` : ''}
@@ -358,7 +358,7 @@ const LeadsPanel: React.FC = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-medium text-sm text-zinc-100">{lead.title}</div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-zinc-500">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[12px] text-zinc-500">
                       {lead.phone ? (
                         <>
                           <span className="flex items-center gap-1"><Phone size={11} />{lead.phone}</span>
@@ -381,11 +381,11 @@ const LeadsPanel: React.FC = () => {
                             value={phoneDrafts[lead.id] ?? ''}
                             onChange={(e) => setPhoneDrafts((d) => ({ ...d, [lead.id]: e.target.value }))}
                             placeholder="telefone (busque no Maps)"
-                            className="w-40 rounded border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-[10px] text-zinc-200"
+                            className="w-40 rounded border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-[11px] text-zinc-200"
                           />
                           <button
                             onClick={() => savePhone(lead.id)}
-                            className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-blue-400 hover:border-blue-500"
+                            className="rounded border border-zinc-700 px-1.5 py-0.5 text-[11px] text-blue-400 hover:border-blue-500"
                           >
                             Salvar
                           </button>
@@ -412,14 +412,14 @@ const LeadsPanel: React.FC = () => {
                   <div className="flex gap-1 shrink-0">
                     <button
                       onClick={() => doCopy(`${lead.id}-first`, lead.draft.firstTouch)}
-                      className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border border-zinc-700 hover:border-blue-500 hover:text-blue-400"
+                      className="flex items-center gap-1 px-2 py-1 text-[12px] rounded border border-zinc-700 hover:border-blue-500 hover:text-blue-400"
                       title="Copiar primeira mensagem (sem link)"
                     >
                       <Copy size={12} /> {copied === `${lead.id}-first` ? 'Copiado' : '1ª mensagem'}
                     </button>
                     <button
                       onClick={() => doCopy(`${lead.id}-follow`, lead.draft.followUp)}
-                      className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border border-zinc-700 hover:border-blue-500 hover:text-blue-400"
+                      className="flex items-center gap-1 px-2 py-1 text-[12px] rounded border border-zinc-700 hover:border-blue-500 hover:text-blue-400"
                       title="Copiar follow-up (24-48h depois)"
                     >
                       <Copy size={12} /> {copied === `${lead.id}-follow` ? 'Copiado' : 'Follow-up'}
@@ -434,7 +434,7 @@ const LeadsPanel: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[12px]">
                   <pre className="whitespace-pre-wrap font-sans text-zinc-400 bg-black/50 rounded-lg p-2 border border-zinc-800">
 {lead.draft.firstTouch}
                   </pre>

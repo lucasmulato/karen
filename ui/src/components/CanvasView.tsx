@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Minus, Plus, RotateCcw } from 'lucide-react';
 
 interface CanvasNode {
@@ -33,7 +33,8 @@ function titleOf(text: string): string {
 const CanvasView: React.FC<{ canvas: Canvas }> = ({ canvas }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 20, y: 20 });
-  const drag = React.useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   const nodes = useMemo(() => canvas.nodes ?? [], [canvas]);
   const edges = useMemo(() => canvas.edges ?? [], [canvas]);
@@ -45,6 +46,24 @@ const CanvasView: React.FC<{ canvas: Canvas }> = ({ canvas }) => {
     const maxY = Math.max(...nodes.map((n) => n.y + n.height)) + 120;
     return { w: maxX, h: maxY, maxX, maxY };
   }, [nodes]);
+
+  function fit() {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const s = Math.max(0.2, Math.min(rect.width / size.w, rect.height / size.h, 1.5));
+    setZoom(s);
+    setPan({
+      x: (rect.width - size.w * s) / 2,
+      y: (rect.height - size.h * s) / 2,
+    });
+  }
+
+  useEffect(() => {
+    fit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvas, size.w, size.h]);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     drag.current = { x: e.clientX, y: e.clientY, ox: pan.x, oy: pan.y };
@@ -63,6 +82,7 @@ const CanvasView: React.FC<{ canvas: Canvas }> = ({ canvas }) => {
 
   return (
     <div
+      ref={containerRef}
       className="relative h-full w-full cursor-grab overflow-hidden bg-[#0e0e0e] active:cursor-grabbing"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -119,8 +139,8 @@ const CanvasView: React.FC<{ canvas: Canvas }> = ({ canvas }) => {
               borderTop: `3px solid ${COLORS[n.color ?? '6'] ?? '#a855f7'}`,
             }}
           >
-            <p className="truncate text-[11px] font-semibold text-zinc-100">{titleOf(n.text)}</p>
-            <p className="mt-1 line-clamp-3 text-[10px] text-zinc-500">
+            <p className="truncate text-[12px] font-semibold text-zinc-100">{titleOf(n.text)}</p>
+            <p className="mt-1 line-clamp-3 text-[11px] text-zinc-500">
               {n.text.split('\n').filter((l) => l && !l.startsWith('#') && !/^\[[a-z_]+\]$/.test(l)).join(' ').slice(0, 180)}
             </p>
           </div>
@@ -130,14 +150,14 @@ const CanvasView: React.FC<{ canvas: Canvas }> = ({ canvas }) => {
         <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.1))} className="p-1 text-zinc-400 hover:text-white" title="Diminuir">
           <Minus size={13} />
         </button>
-        <span className="w-10 text-center text-[10px] text-zinc-500">{Math.round(zoom * 100)}%</span>
+        <span className="w-10 text-center text-[11px] text-zinc-500">{Math.round(zoom * 100)}%</span>
         <button onClick={() => setZoom((z) => Math.min(2.5, z + 0.1))} className="p-1 text-zinc-400 hover:text-white" title="Aumentar">
           <Plus size={13} />
         </button>
         <button
-          onClick={() => { setZoom(1); setPan({ x: 20, y: 20 }); }}
+          onClick={fit}
           className="p-1 text-zinc-400 hover:text-white"
-          title="Resetar"
+          title="Ajustar à tela"
         >
           <RotateCcw size={13} />
         </button>

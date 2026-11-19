@@ -4,6 +4,7 @@ import CanvasView from './CanvasView';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
 import { FileText, FolderOpen, Leaf, Network, Save } from 'lucide-react';
+import { toast } from '../toast';
 
 interface GardenNote {
   id: string;
@@ -43,7 +44,6 @@ const NotesPanel: React.FC = () => {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
   const [garden, setGarden] = useState<GardenData | null>(null);
   const [maturity, setMaturity] = useState('all');
   const [canvas, setCanvas] = useState<any>(null);
@@ -90,8 +90,7 @@ const NotesPanel: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setDirty(false);
-      setNotice(`Salvo: ${selected}`);
-      window.setTimeout(() => setNotice(''), 2000);
+      toast(`Salvo: ${selected}`);
       await loadFiles();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -199,12 +198,11 @@ const NotesPanel: React.FC = () => {
           </button>
         </div>
         <div className="flex items-center gap-2">
-          {notice && <span className="text-[10px] text-emerald-400">{notice}</span>}
           {tab === 'files' && (
             <button
               onClick={save}
               disabled={!dirty || saving}
-              className="flex items-center gap-1 rounded bg-blue-600 px-2.5 py-1 text-[11px] text-white disabled:opacity-40"
+              className="flex items-center gap-1 rounded bg-blue-600 px-2.5 py-1 text-[12px] text-white disabled:opacity-40"
             >
               <Save size={12} /> {saving ? 'Salvando...' : 'Salvar'}
             </button>
@@ -213,7 +211,7 @@ const NotesPanel: React.FC = () => {
       </div>
 
       {error && (
-        <div className="shrink-0 border-b border-red-900/50 bg-red-950/30 px-4 py-2 text-[11px] text-red-300">
+        <div className="shrink-0 border-b border-red-900/50 bg-red-950/30 px-4 py-2 text-[12px] text-red-300">
           {error}
         </div>
       )}
@@ -221,19 +219,19 @@ const NotesPanel: React.FC = () => {
       {tab === 'files' && (
         <div className="flex min-h-0 flex-1">
           <aside className="w-52 shrink-0 overflow-y-auto border-r border-zinc-800 bg-[#181818] px-2 py-2">
-            <p className="px-1 pb-2 text-[10px] uppercase tracking-widest text-zinc-600">Vault</p>
+            <p className="px-1 pb-2 text-[11px] uppercase tracking-widest text-zinc-600">Vault</p>
             {files.map((f) => (
               <button
                 key={f}
                 onClick={() => openFile(f)}
-                className={`flex w-full items-center gap-1.5 truncate rounded px-2 py-1 text-left text-[11px] ${selected === f ? 'bg-zinc-800 text-blue-300' : 'text-zinc-400 hover:bg-zinc-900'}`}
+                className={`flex w-full items-center gap-1.5 truncate rounded px-2 py-1 text-left text-[12px] ${selected === f ? 'bg-zinc-800 text-blue-300' : 'text-zinc-400 hover:bg-zinc-900'}`}
                 title={f}
               >
                 <FolderOpen size={11} className="shrink-0" />
                 {f}
               </button>
             ))}
-            {files.length === 0 && <p className="px-1 text-[11px] text-zinc-600">Nenhuma nota.</p>}
+            {files.length === 0 && <p className="px-1 text-[12px] text-zinc-600">Nenhuma nota.</p>}
           </aside>
           <div className="min-w-0 flex-1 overflow-hidden">
             {selected ? (
@@ -270,7 +268,7 @@ const NotesPanel: React.FC = () => {
                 ].map(([label, value, color]) => (
                   <div key={String(label)} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
                     <div className={`text-xl font-semibold ${color}`}>{value}</div>
-                    <div className="text-[10px] uppercase tracking-wider text-zinc-600">{label}</div>
+                    <div className="text-[11px] uppercase tracking-wider text-zinc-600">{label}</div>
                   </div>
                 ))}
               </div>
@@ -283,7 +281,7 @@ const NotesPanel: React.FC = () => {
                   <button
                     key={key}
                     onClick={() => setMaturity(key)}
-                    className={`rounded-full border px-3 py-1 text-[11px] ${maturity === key ? 'border-emerald-600 text-emerald-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
+                    className={`rounded-full border px-3 py-1 text-[12px] ${maturity === key ? 'border-emerald-600 text-emerald-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
                   >
                     {label}
                   </button>
@@ -294,11 +292,11 @@ const NotesPanel: React.FC = () => {
                   <div key={n.id} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2">
                     <div className="min-w-0">
                       <p className="truncate text-xs text-zinc-200">{n.name}</p>
-                      <p className="text-[10px] text-zinc-600">[{n.type}]</p>
+                      <p className="text-[11px] text-zinc-600">[{n.type}]</p>
                     </div>
                     <button
                       onClick={() => openFromNode(n.name)}
-                      className="shrink-0 rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
+                      className="shrink-0 rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
                     >
                       Abrir / criar
                     </button>
@@ -308,7 +306,7 @@ const NotesPanel: React.FC = () => {
                   <p className="text-xs text-zinc-600">Nada nesta categoria 🎉</p>
                 )}
               </div>
-              <p className="text-[10px] text-zinc-600">
+              <p className="text-[11px] text-zinc-600">
                 Custo: US$ 0,00 · dados locais do grafo
               </p>
             </>

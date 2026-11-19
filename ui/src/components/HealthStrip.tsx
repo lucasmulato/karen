@@ -51,7 +51,7 @@ const HealthStrip: React.FC = () => {
         <span
           key={item.key}
           title={item.title}
-          className="flex items-center gap-1 rounded-full border border-zinc-800 bg-black/50 px-2 py-1 text-[9px] uppercase tracking-wider text-zinc-400"
+          className="flex items-center gap-1 rounded-full border border-zinc-800 bg-black/50 px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-400"
         >
           <span className={`h-1.5 w-1.5 rounded-full ${dot(item.status)}`} />
           {item.label}

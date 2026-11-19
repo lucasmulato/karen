@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
+import { RotateCcw } from 'lucide-react';
 
 export interface GraphNode extends d3.SimulationNodeDatum {
   id: string;
@@ -58,7 +59,13 @@ const GraphView: React.FC<GraphViewProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [hovered, setHovered] = useState<{
+    node: GraphNode;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Keep the latest callbacks without re-running the graph effect.
   const onNodeClickRef = useRef(onNodeClick);
@@ -88,15 +95,15 @@ const GraphView: React.FC<GraphViewProps> = ({
     if (!svgRef.current || !data) return;
 
     const { width, height } = dimensions;
+    const zoom = d3.zoom<SVGSVGElement, unknown>().on('zoom', (event) => {
+      g.attr('transform', event.transform);
+    });
+    zoomRef.current = zoom;
     const svg = d3
       .select(svgRef.current)
       .attr('width', width)
       .attr('height', height)
-      .call(
-        d3.zoom<SVGSVGElement, unknown>().on('zoom', (event) => {
-          g.attr('transform', event.transform);
-        })
-      );
+      .call(zoom);
 
     svg.selectAll('*').remove();
     const g = svg.append('g');
@@ -178,6 +185,15 @@ const GraphView: React.FC<GraphViewProps> = ({
           .on('drag', dragged)
           .on('end', dragended) as any)
       )
+      .on('mouseenter mousemove', (event: MouseEvent, d: GraphNode) => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        setHovered({
+          node: d,
+          x: event.clientX - (rect?.left ?? 0),
+          y: event.clientY - (rect?.top ?? 0),
+        });
+      })
+      .on('mouseleave', () => setHovered(null))
       .on('click', (event, d) => {
         event.stopPropagation();
         onNodeClickRef.current?.(d);
@@ -259,9 +275,55 @@ const GraphView: React.FC<GraphViewProps> = ({
       .attr('stroke-width', (d) => (d.id === highlightId ? 2 : 0));
   }, [highlightId]);
 
+  const presentTypes = [...new Set((data?.nodes ?? []).map((n) => n.type))];
+
+  function resetView() {
+    if (svgRef.current && zoomRef.current) {
+      d3.select(svgRef.current)
+        .transition()
+        .duration(300)
+        .call(zoomRef.current.transform, d3.zoomIdentity);
+    }
+  }
+
   return (
-    <div ref={containerRef} className="w-full h-full bg-zinc-950">
-      <svg ref={svgRef} className="w-full h-full" />
+    <div ref={containerRef} className="relative h-full w-full bg-zinc-950">
+      <svg ref={svgRef} className="h-full w-full" />
+
+      {presentTypes.length > 0 && (
+        <div className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-lg border border-zinc-800 bg-black/70 p-2 backdrop-blur">
+          <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">Legenda</p>
+          <div className="flex max-w-64 flex-wrap gap-x-3 gap-y-1">
+            {presentTypes.map((type) => (
+              <span key={type} className="flex items-center gap-1 text-[11px] text-zinc-400">
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: NODE_COLORS[type] ?? '#9ca3af' }}
+                />
+                {type}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={resetView}
+        className="absolute bottom-4 right-4 z-10 flex items-center gap-1 rounded-lg border border-zinc-800 bg-black/70 px-2 py-1.5 text-[11px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
+        title="Centralizar grafo"
+      >
+        <RotateCcw size={12} /> Centralizar
+      </button>
+
+      {hovered && (
+        <div
+          className="pointer-events-none absolute z-20 max-w-56 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 shadow-2xl"
+          style={{ left: hovered.x + 14, top: hovered.y + 14 }}
+        >
+          <p className="truncate text-xs font-medium text-zinc-100">{hovered.node.name}</p>
+          <p className="mt-0.5 text-[11px] text-zinc-500">[{hovered.node.type}]</p>
+        </div>
+      )}
     </div>
   );
 };

@@ -128,7 +128,7 @@ const CommandPanel: React.FC = () => {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 justify-end border-b border-zinc-900 px-5 py-1.5">
-        <button onClick={refresh} className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-blue-400" title="Atualizar">
+        <button onClick={refresh} className="flex items-center gap-1 text-[11px] text-zinc-500 hover:text-blue-400" title="Atualizar">
           <RefreshCw size={12} /> Atualizar
         </button>
       </div>
@@ -141,18 +141,18 @@ const CommandPanel: React.FC = () => {
 
         {pending.length > 0 && (
           <section className="flex flex-col gap-2">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-amber-400">
+            <h3 className="text-[12px] font-bold uppercase tracking-widest text-amber-400">
               Aprovação pendente ({pending.length})
             </h3>
             {pending.map((run) => (
               <div key={run.id} className="rounded-xl border border-amber-800/60 bg-amber-950/20 p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium text-amber-200">{labelOf(run.command_id)}</span>
-                  <span className="text-[10px] text-zinc-500">
+                  <span className="text-[11px] text-zinc-500">
                     solicitado por {run.source} · {new Date(run.created_at).toLocaleTimeString()}
                   </span>
                 </div>
-                <pre className="whitespace-pre-wrap font-mono text-[11px] text-zinc-300 bg-black/60 rounded-lg p-2 border border-zinc-800">
+                <pre className="whitespace-pre-wrap font-mono text-[12px] text-zinc-300 bg-black/60 rounded-lg p-2 border border-zinc-800">
 {definitions.find((d) => d.id === run.command_id)?.preview ?? run.command_id}
                 </pre>
                 <div className="flex gap-2 justify-end">
@@ -177,7 +177,7 @@ const CommandPanel: React.FC = () => {
         )}
 
         <section className="flex flex-col gap-2">
-          <h3 className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Comandos rápidos</h3>
+          <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-500">Comandos rápidos</h3>
           <div className="grid grid-cols-2 gap-2">
             {[...read, ...write].map((def) => (
               <button
@@ -195,7 +195,7 @@ const CommandPanel: React.FC = () => {
                   <span className={`h-1.5 w-1.5 rounded-full ${def.risk === 'write' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                   {def.label}
                 </span>
-                <span className="text-[10px] text-zinc-500 truncate w-full">{def.description}</span>
+                <span className="text-[11px] text-zinc-500 truncate w-full">{def.description}</span>
               </button>
             ))}
           </div>
@@ -203,27 +203,27 @@ const CommandPanel: React.FC = () => {
 
         <section className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+            <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-500">
               Jardim de notas
             </h3>
             <button
               onClick={gardenReport}
               disabled={gardenBusy}
-              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded border border-zinc-700 hover:border-emerald-600 hover:text-emerald-400 disabled:opacity-40"
+              className="flex items-center gap-1 px-2 py-1 text-[12px] rounded border border-zinc-700 hover:border-emerald-600 hover:text-emerald-400 disabled:opacity-40"
             >
               <RefreshCw size={12} className={gardenBusy ? 'animate-spin' : ''} />
               {gardenBusy ? 'Analisando...' : 'Gerar relatório'}
             </button>
           </div>
           {garden && (
-            <pre className="whitespace-pre-wrap font-mono text-[11px] text-zinc-300 bg-black/60 rounded-lg p-3 border border-zinc-800 max-h-72 overflow-auto">
+            <pre className="whitespace-pre-wrap font-mono text-[12px] text-zinc-300 bg-black/60 rounded-lg p-3 border border-zinc-800 max-h-72 overflow-auto">
 {garden}
             </pre>
           )}
         </section>
 
         <section className="flex flex-col gap-2">
-          <h3 className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Histórico</h3>
+          <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-500">Histórico</h3>
           {runs.length === 0 && <p className="text-xs text-zinc-600">Nenhum comando executado ainda.</p>}
           {runs.map((run) => (
             <div key={run.id} className="rounded-lg border border-zinc-800 bg-zinc-900/40">
@@ -234,11 +234,11 @@ const CommandPanel: React.FC = () => {
                 <span className="flex items-center gap-2 text-xs text-zinc-300">
                   <ChevronDown size={13} className={`transition-transform ${expanded === run.id ? 'rotate-180' : ''}`} />
                   {labelOf(run.command_id)}
-                  <span className={`rounded border px-1.5 py-0.5 text-[9px] uppercase ${STATUS_STYLE[run.status] ?? ''}`}>
+                  <span className={`rounded border px-1.5 py-0.5 text-[10px] uppercase ${STATUS_STYLE[run.status] ?? ''}`}>
                     {run.status}
                   </span>
                 </span>
-                <span className="text-[10px] text-zinc-600">
+                <span className="text-[11px] text-zinc-600">
                   {run.exit_code !== null ? `exit ${run.exit_code} · ` : ''}
                   {run.duration_ms !== null ? `${(run.duration_ms / 1000).toFixed(1)}s · ` : ''}
                   {new Date(run.created_at).toLocaleString()}
@@ -247,17 +247,17 @@ const CommandPanel: React.FC = () => {
               {expanded === run.id && (
                 <div className="border-t border-zinc-800 px-3 py-2 flex flex-col gap-2">
                   {run.stdout && (
-                    <pre className="whitespace-pre-wrap font-mono text-[11px] text-zinc-300 bg-black/60 rounded p-2 max-h-60 overflow-auto">
+                    <pre className="whitespace-pre-wrap font-mono text-[12px] text-zinc-300 bg-black/60 rounded p-2 max-h-60 overflow-auto">
 {run.stdout}
                     </pre>
                   )}
                   {run.stderr && (
-                    <pre className="whitespace-pre-wrap font-mono text-[11px] text-red-300 bg-black/60 rounded p-2 max-h-40 overflow-auto">
+                    <pre className="whitespace-pre-wrap font-mono text-[12px] text-red-300 bg-black/60 rounded p-2 max-h-40 overflow-auto">
 {run.stderr}
                     </pre>
                   )}
                   {!run.stdout && !run.stderr && (
-                    <p className="text-[11px] text-zinc-600">Sem saída registrada.</p>
+                    <p className="text-[12px] text-zinc-600">Sem saída registrada.</p>
                   )}
                 </div>
               )}

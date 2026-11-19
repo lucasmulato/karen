@@ -111,7 +111,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onGraphChanged }) => {
             onClick={() => submit(p.text)}
             disabled={busy || configured !== true}
             title={p.text}
-            className="shrink-0 rounded-full border border-zinc-700 px-2.5 py-1 text-[10px] text-zinc-400 hover:border-blue-500 hover:text-blue-400 disabled:opacity-40"
+            className="shrink-0 rounded-full border border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-400 hover:border-blue-500 hover:text-blue-400 disabled:opacity-40"
           >
             {p.label}
           </button>

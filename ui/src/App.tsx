@@ -24,6 +24,8 @@ import HealthStrip from './components/HealthStrip';
 import WorkspacePane from './components/WorkspacePane';
 import Dialog from './components/Dialog';
 import GraphSearch from './components/GraphSearch';
+import ToastHost from './components/ToastHost';
+import { toast } from './toast';
 
 const NotesPanel = React.lazy(() => import('./components/NotesPanel'));
 
@@ -155,9 +157,9 @@ const App: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       await refresh();
-      window.alert(`Canvas importado: ${data.imported} nós, ${data.edges} arestas.`);
+      toast(`Canvas importado: ${data.imported} nós, ${data.edges} arestas.`);
     } catch (err) {
-      window.alert(`Falha ao importar: ${err instanceof Error ? err.message : String(err)}`);
+      toast(`Falha ao importar: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       e.target.value = '';
     }
@@ -449,9 +451,6 @@ const App: React.FC = () => {
               KAREN <span className="text-zinc-600 px-2">//</span>{' '}
               <span className="text-blue-400">Cyber &amp; Leads</span>
             </h1>
-            <span className="hidden lg:block">
-              <HealthStrip />
-            </span>
             <button
               onClick={exportCanvas}
               className="text-zinc-500 hover:text-blue-400 transition-colors"
@@ -473,6 +472,10 @@ const App: React.FC = () => {
             </label>
           </div>
 
+          <div className="pointer-events-auto absolute left-6 top-16 hidden lg:block">
+            <HealthStrip />
+          </div>
+
           {showSearch && (
             <GraphSearch
               onClose={() => setShowSearch(false)}
@@ -491,14 +494,14 @@ const App: React.FC = () => {
           {showHelp && (
             <div className="pointer-events-auto absolute right-6 top-16 w-64 rounded-xl border border-zinc-800 bg-black/95 p-4 text-xs text-zinc-400 shadow-2xl">
               <p className="mb-2 font-semibold text-zinc-200">Atalhos</p>
-              <ul className="space-y-1 text-[11px]">
+              <ul className="space-y-1 text-[12px]">
                 <li><kbd className="text-blue-400">/</kbd> — buscar nós</li>
                 <li><kbd className="text-blue-400">Esc</kbd> — fechar diálogo ou painel</li>
                 <li>Arraste a barra lateral para redimensionar o painel</li>
               </ul>
               <button
                 onClick={() => setShowHelp(false)}
-                className="mt-3 w-full rounded-lg border border-zinc-700 py-1.5 text-[11px] hover:border-blue-500"
+                className="mt-3 w-full rounded-lg border border-zinc-700 py-1.5 text-[12px] hover:border-blue-500"
               >
                 Fechar
               </button>
@@ -663,7 +666,7 @@ const App: React.FC = () => {
       {isSidebarOpen && selectedNode && (
         <aside className="w-96 border-l border-zinc-800 bg-black/90 backdrop-blur-xl p-8 flex flex-col gap-6 animate-in slide-in-from-right duration-300">
           <div className="flex justify-between items-start">
-            <div className="px-3 py-1 bg-zinc-800 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <div className="px-3 py-1 bg-zinc-800 rounded-full text-[11px] font-bold uppercase tracking-widest text-zinc-400">
               {selectedNode.type}
             </div>
             <button
@@ -682,7 +685,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-4 mt-4">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+            <div className="text-[11px] font-bold uppercase tracking-widest text-zinc-600">
               Propriedades
             </div>
             <div className="grid grid-cols-2 gap-4 text-xs">
@@ -710,6 +713,7 @@ const App: React.FC = () => {
           </div>
         </aside>
       )}
+      <ToastHost />
     </div>
   );
 };

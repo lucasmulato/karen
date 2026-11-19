@@ -130,6 +130,8 @@ For the configured local stack (llama.cpp + PostgreSQL + API), run
 - **Unified workspace**: Chat, Leads, Commands and Notes share one docked,
   resizable pane; Add/Connect use modal dialogs. Clicking a node closes the pane
   and shows the detail sidebar. `Esc` closes, `/` opens graph search.
+- **Legibility**: larger type scale, graph legend + hover tooltip + "Centralizar",
+  canvas auto-fit, toast notifications instead of browser alerts.
 - **Health strip + quick prompts**: The header shows live API / KAREN / DB / TLS
   status from `GET /api/health/full`, and the chat has one-click prompt chips
   for status, garden report, lead search and memory.
