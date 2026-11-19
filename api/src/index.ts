@@ -298,6 +298,11 @@ const approvalSchema = z.object({
   token: z.string().min(10).max(200),
 });
 
+const noteWriteSchema = z.object({
+  path: z.string().min(1).max(300),
+  content: z.string().max(60_000),
+});
+
 const canvasImportSchema = z.object({
   nodes: z
     .array(
@@ -562,6 +567,11 @@ async function handleHttp(
       return;
     }
 
+    if (req.method === "GET" && path === "/api/garden/data") {
+      sendJson(res, 200, await garden.data());
+      return;
+    }
+
     if (req.method === "GET" && path === "/api/garden/report") {
       sendJson(res, 200, { report: await garden.report() });
       return;
@@ -577,6 +587,21 @@ async function handleHttp(
       const notePath = url.searchParams.get("path") ?? "";
       try {
         sendJson(res, 200, { path: notePath, content: await notes.read(notePath) });
+      } catch (err: any) {
+        sendJson(res, 400, { error: err.message });
+      }
+      return;
+    }
+
+    if (req.method === "PUT" && path === "/api/notes/content") {
+      const parsed = noteWriteSchema.safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      try {
+        await notes.write(parsed.data.path, parsed.data.content);
+        sendJson(res, 200, { saved: parsed.data.path });
       } catch (err: any) {
         sendJson(res, 400, { error: err.message });
       }

@@ -220,6 +220,15 @@ The env file is `/home/admin/models/karen.env` (mode 600, outside the repo).
 Only `/api/*` is proxied; the MCP stdio surface stays local. A scrape can take
 minutes, so the button shows a spinner while the browser waits.
 
+### Notes UI
+
+The notebook button opens a resizable pane with three tabs:
+- **Arquivos**: vault file tree, markdown editor (`@uiw/react-md-editor`), save via `PUT /api/notes/content`.
+- **Jardim**: maturity counts plus orphan/stale notes from `GET /api/garden/data`; "Abrir / criar" opens the matching vault note or creates a stub.
+- **Canvas**: renders the exported graph from `GET /api/graph/canvas` with pan/zoom (custom renderer for JSON Canvas 1.0).
+
+See `docs/notes-ui-references.md` for the free/MIT projects evaluated.
+
 ### Persistent memory (markdown vault)
 
 KAREN keeps durable facts outside the repo at `KAREN_VAULT_DIR`

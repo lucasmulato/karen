@@ -13,12 +13,15 @@ import {
   MessageSquare,
   Link2,
   MapPin,
+  NotebookPen,
   Terminal,
   X,
 } from 'lucide-react';
 import ChatPanel from './components/ChatPanel';
 import LeadsPanel from './components/LeadsPanel';
 import CommandPanel from './components/CommandPanel';
+
+const NotesPanel = React.lazy(() => import('./components/NotesPanel'));
 
 interface NodeRow {
   id: string;
@@ -67,6 +70,7 @@ const App: React.FC = () => {
   const [showChat, setShowChat] = useState(false);
   const [showLeads, setShowLeads] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const [paneWidth, setPaneWidth] = useState<number>(() => {
     const saved = Number(localStorage.getItem('karen-pane-width'));
     return Number.isFinite(saved) && saved >= 25 && saved <= 75 ? saved : 50;
@@ -322,6 +326,7 @@ const App: React.FC = () => {
               setShowChat((v) => !v);
               setShowLeads(false);
               setShowCommands(false);
+              setShowNotes(false);
             }}
             className={`p-2 transition-colors ${
               showChat ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
@@ -335,6 +340,7 @@ const App: React.FC = () => {
               setShowLeads((v) => !v);
               setShowChat(false);
               setShowCommands(false);
+              setShowNotes(false);
             }}
             className={`p-2 transition-colors ${
               showLeads ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
@@ -348,6 +354,7 @@ const App: React.FC = () => {
               setShowCommands((v) => !v);
               setShowChat(false);
               setShowLeads(false);
+              setShowNotes(false);
             }}
             className={`p-2 transition-colors ${
               showCommands ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
@@ -355,6 +362,20 @@ const App: React.FC = () => {
             title="KAREN · Comandos"
           >
             <Terminal size={24} />
+          </button>
+          <button
+            onClick={() => {
+              setShowNotes((v) => !v);
+              setShowChat(false);
+              setShowLeads(false);
+              setShowCommands(false);
+            }}
+            className={`p-2 transition-colors ${
+              showNotes ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
+            }`}
+            title="KAREN · Notas"
+          >
+            <NotebookPen size={24} />
           </button>
         </div>
         <div className="mt-auto">
@@ -501,7 +522,7 @@ const App: React.FC = () => {
         />
         </div>
 
-        {(showChat || showCommands) && (
+        {(showChat || showCommands || showNotes) && (
           <div
             role="separator"
             aria-orientation="vertical"
@@ -533,6 +554,16 @@ const App: React.FC = () => {
         {showCommands && (
           <aside className="w-full md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 md:border-l-0 bg-black">
             <CommandPanel onClose={() => setShowCommands(false)} />
+          </aside>
+        )}
+
+        {showNotes && (
+          <aside className="w-full md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 md:border-l-0 bg-black">
+            <React.Suspense
+              fallback={<div className="flex h-full items-center justify-center text-xs text-zinc-500">Carregando notas...</div>}
+            >
+              <NotesPanel onClose={() => setShowNotes(false)} />
+            </React.Suspense>
           </aside>
         )}
       </main>
