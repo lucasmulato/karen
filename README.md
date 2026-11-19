@@ -88,6 +88,7 @@ stdout/stderr and duration. The model never receives a shell.
 - Chat with quick prompts, durable memory in `MEMORY.md` (append-only) and tool calls.
 - Resizable side pane; `Esc` closes, `/` opens graph search.
 - Live health strip (API / model / DB / TLS), an attention badge with real pending items, and a recent-activity feed on the Hub.
+- Quiet HUD: the sidebar hides until you hover the left edge (small handle on touch), and `/` or `Ctrl+K` opens a searchable command palette for every feature. No invented telemetry.
 - Tailwind v4 CSS-first design tokens, visible focus rings, container-query panes and reduced-motion support.
 
 ## Getting started

@@ -31,6 +31,8 @@ import { toast } from './toast';
 
 import EvaPanel from './components/EvaPanel';
 import AttentionBadge from './components/AttentionBadge';
+import CommandPalette, { type PaletteAction } from './components/CommandPalette';
+import { PALETTE_ICONS } from './components/paletteIcons';
 
 const NotesPanel = React.lazy(() => import('./components/NotesPanel'));
 
@@ -82,6 +84,9 @@ const App: React.FC = () => {
   const [showLeads, setShowLeads] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
   const [showEva, setShowEva] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [mode, setMode] = useState<'karen' | 'eva'>('karen');
   const [mainView, setMainView] = useState<'notes' | 'graph'>('notes');
   const [showNoteNodes, setShowNoteNodes] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -114,14 +119,23 @@ const App: React.FC = () => {
   }, [refresh]);
 
   useEffect(() => {
+    fetch(`${API_BASE}/eva/mode`)
+      .then((r) => r.json())
+      .then((d) => setMode(d.mode ?? 'karen'))
+      .catch(() => setMode('karen'));
+  }, []);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
-      if (e.key === '/') {
+      if (e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) {
         e.preventDefault();
-        setShowSearch(true);
+        setPaletteOpen(true);
       }
       if (e.key === 'Escape') {
+        setPaletteOpen(false);
+        setRevealed(false);
         setShowHelp(false);
         setShowSearch(false);
         setShowAdd(false);
@@ -330,6 +344,60 @@ const App: React.FC = () => {
         )
       : undefined;
 
+  function openPane(pane: 'chat' | 'leads' | 'commands' | 'eva' | 'notes') {
+    setShowChat(pane === 'chat');
+    setShowLeads(pane === 'leads');
+    setShowCommands(pane === 'commands');
+    setShowEva(pane === 'eva');
+    if (pane === 'notes') setMainView('notes');
+    setRevealed(false);
+  }
+
+  async function toggleMode() {
+    const next = mode === 'eva' ? 'karen' : 'eva';
+    try {
+      const res = await fetch(`${API_BASE}/eva/mode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: next }),
+      });
+      if (res.ok) { setMode(next); toast(`Modo ${next.toUpperCase()} ativo`); }
+    } catch { /* ignore */ }
+  }
+
+  async function syncNotes() {
+    try {
+      const res = await fetch(`${API_BASE}/notes/sync`, { method: 'POST' });
+      const data = await res.json();
+      toast(`Sincronizado: ${data.notes} notas, ${data.edges} arestas`);
+      loadGraphIfAny();
+    } catch { toast('Falha ao sincronizar'); }
+  }
+
+  function loadGraphIfAny() {
+    if (mainView === 'graph') refresh();
+  }
+
+  const paletteActions: PaletteAction[] = [
+    { id: 'chat', label: 'Abrir chat', hint: 'conversar', icon: PALETTE_ICONS.chat, run: () => openPane('chat') },
+    { id: 'leads', label: 'Abrir leads', hint: 'prospecção', icon: PALETTE_ICONS.leads, run: () => openPane('leads') },
+    { id: 'commands', label: 'Abrir comandos', hint: 'operações', icon: PALETTE_ICONS.commands, run: () => openPane('commands') },
+    { id: 'notes', label: 'Abrir notas', hint: 'vault', icon: PALETTE_ICONS.notes, run: () => openPane('notes') },
+    { id: 'mapa', label: 'Mapa de notas', hint: 'grafo', icon: PALETTE_ICONS.mapa, run: () => { setMainView('notes'); toast('Abra a aba Mapa no painel de notas'); } },
+    { id: 'jardim', label: 'Jardim', hint: 'saúde das notas', icon: PALETTE_ICONS.garden, run: () => toast('Abra a aba Jardim no painel de notas') },
+    { id: 'eva', label: 'Painel EVA', hint: 'co-sócia', icon: PALETTE_ICONS.eva, run: () => openPane('eva') },
+    { id: 'mode', label: `Alternar para ${mode === 'eva' ? 'KAREN' : 'EVA'}`, hint: `modo atual: ${mode}`, icon: PALETTE_ICONS.mode, run: toggleMode },
+    { id: 'sync', label: 'Sincronizar grafo', hint: 'notas → Postgres', icon: PALETTE_ICONS.sync, run: syncNotes },
+    { id: 'health', label: 'Ver saúde do sistema', hint: 'real', icon: PALETTE_ICONS.health, run: async () => {
+      const d = await fetch(`${API_BASE}/health/full`).then((r) => r.json());
+      toast(`API ${d.api} · DB ${d.db} · modelo ${d.llama}`);
+    } },
+    { id: 'keys', label: 'Ver status das chaves', hint: 'configured/missing', icon: PALETTE_ICONS.keys, run: async () => {
+      const d = await fetch(`${API_BASE}/chat/status`).then((r) => r.json());
+      toast(`leads: ${d.leads?.configured ? 'on' : 'off'} · modelo ${d.model}`);
+    } },
+  ];
+
   const connectBannerText = !connect
     ? ''
     : !connect.source
@@ -341,7 +409,24 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
       {/* Navigation Sidebar */}
-      <nav className="w-16 border-r border-zinc-800 flex flex-col items-center py-6 gap-8 bg-black">
+      {/* Quiet-HUD hover zone: the rail appears only on pointer approach. */}
+      <div
+        className="absolute left-0 top-0 z-40 h-full w-2"
+        onMouseEnter={() => setRevealed(true)}
+        title="Passe o mouse para revelar os controles"
+      />
+      <button
+        onClick={() => setRevealed((v) => !v)}
+        className="absolute left-0 top-1/2 z-40 h-14 w-1.5 -translate-y-1/2 rounded-r bg-cyan-900/70 hover:bg-cyan-500"
+        title="Mostrar controles"
+        aria-label="Mostrar controles"
+      />
+      <div
+        className={`absolute left-0 top-0 z-30 h-full transition-transform duration-200 ${revealed ? 'translate-x-0' : '-translate-x-16'}`}
+        onMouseEnter={() => setRevealed(true)}
+        onMouseLeave={() => setRevealed(false)}
+      >
+      <nav className="w-16 border-r border-cyan-950 flex flex-col items-center py-6 gap-8 bg-[#05070d]/95 backdrop-blur">
         <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-500/20">
           <Brain size={24} className="text-white" />
         </div>
@@ -462,6 +547,7 @@ const App: React.FC = () => {
           </button>
         </div>
       </nav>
+      </div>
 
       {/* Main Content */}
       <main
@@ -474,8 +560,15 @@ const App: React.FC = () => {
           <div className="pointer-events-auto flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-2 rounded-full border border-zinc-800 shadow-xl">
             <h1 className="text-sm font-medium tracking-wider uppercase text-zinc-400">
               KAREN <span className="text-zinc-600 px-2">//</span>{' '}
-              <span className="text-blue-400">Cyber &amp; Leads</span>
+              <span className="text-cyan-400">Cyber &amp; Leads</span>
             </h1>
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="rounded border border-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 hover:border-cyan-600 hover:text-cyan-400"
+              title="Abrir paleta de comandos (/)"
+            >
+              /
+            </button>
             <div className="flex overflow-hidden rounded-lg border border-zinc-700">
               <button
                 onClick={() => setMainView('notes')}
@@ -774,6 +867,11 @@ const App: React.FC = () => {
         </aside>
       )}
       <ToastHost />
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        actions={paletteActions}
+      />
     </div>
   );
 };
