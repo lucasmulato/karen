@@ -12,6 +12,7 @@ import { GraphAgent, chatConfigFromEnv } from "./services/agent.js";
 import { EmbeddingService, embeddingConfigFromEnv } from "./services/embeddings.js";
 import { leadProviderFromEnv } from "./services/providers.js";
 import { LeadService } from "./services/leads.js";
+import { CommandService } from "./services/commands.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -37,6 +38,8 @@ const vault = new VaultService(client, embeddings);
 
 // KAREN lead engine. Cloud Apify keeps the token server-side; when unconfigured
 // the endpoints return a clear 503 instead of failing at request time.
+const commands = new CommandService(client);
+
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
 const leadProvider = leadProviderFromEnv();
@@ -48,7 +51,7 @@ const leads = new LeadService(client, leadProvider, {
 
 // Optional reasoning layer: only constructed when LLM_API_KEY is set.
 const agent = chatConfigFromEnv()
-  ? new GraphAgent(chatConfigFromEnv()!, vault, leads)
+  ? new GraphAgent(chatConfigFromEnv()!, vault, leads, commands)
   : null;
 
 // 3. MCP Server Setup
@@ -278,6 +281,15 @@ const scrapeLeadsSchema = z.object({
   website: z
     .enum(["allPlaces", "placesWithWebsite", "placesWithoutWebsite"])
     .optional(),
+});
+
+const commandRequestSchema = z.object({
+  commandId: z.string().min(1).max(100),
+  args: z.record(z.string(), z.unknown()).optional(),
+});
+
+const approvalSchema = z.object({
+  token: z.string().min(10).max(200),
 });
 
 // Simple fixed-window per-IP limiter for mutating requests.
@@ -511,6 +523,57 @@ async function handleHttp(
         return;
       }
       sendJson(res, 200, row);
+      return;
+    }
+
+    // --- KAREN command permissions -------------------------------------------
+    if (req.method === "GET" && path === "/api/commands") {
+      sendJson(res, 200, {
+        definitions: commands.definitions(),
+        runs: await commands.runs(50),
+      });
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/commands/runs") {
+      const limit = Number(url.searchParams.get("limit") ?? 50);
+      sendJson(res, 200, { runs: await commands.runs(limit) });
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/commands/request") {
+      if (isRateLimited(req.socket.remoteAddress ?? "unknown")) {
+        sendJson(res, 429, { error: "Too many requests" });
+        return;
+      }
+      const parsed = commandRequestSchema.safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      try {
+        const result = await commands.request(parsed.data.commandId, "ui", parsed.data.args ?? {});
+        sendJson(res, result.status === "not_found" ? 404 : 200, result);
+      } catch (err: any) {
+        sendJson(res, 500, { error: err.message });
+      }
+      return;
+    }
+
+    if (req.method === "POST" && /^\/api\/commands\/[\da-f-]+\/(approve|deny)$/i.test(path)) {
+      const parts = path.split("/");
+      const runId = parts[3];
+      const action = parts[4];
+      const parsed = approvalSchema.safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      const result =
+        action === "approve"
+          ? await commands.approve(runId, parsed.data.token)
+          : await commands.deny(runId, parsed.data.token);
+      sendJson(res, result.status === "unauthorized" ? 403 : 200, result);
       return;
     }
 

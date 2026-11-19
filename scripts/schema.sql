@@ -55,6 +55,26 @@ CREATE TABLE IF NOT EXISTS leads (
 CREATE INDEX IF NOT EXISTS idx_leads_suppressed ON leads(suppressed);
 CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at DESC);
 
+-- 2c. KAREN command permission audit log.
+CREATE TABLE IF NOT EXISTS command_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    command_id TEXT NOT NULL,
+    args JSONB NOT NULL DEFAULT '{}',
+    risk TEXT NOT NULL,
+    decision TEXT NOT NULL,
+    status TEXT NOT NULL,
+    source TEXT NOT NULL,
+    exit_code INTEGER,
+    stdout TEXT,
+    stderr TEXT,
+    duration_ms INTEGER,
+    approval_token_hash TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    finished_at TIMESTAMP WITH TIME ZONE
+);
+CREATE INDEX IF NOT EXISTS idx_command_runs_created ON command_runs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_command_runs_status ON command_runs(status);
+
 -- 3. Indexes for fast traversal
 CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(type);
 CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source_id);

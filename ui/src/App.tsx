@@ -11,10 +11,12 @@ import {
   MessageSquare,
   Link2,
   MapPin,
+  Terminal,
   X,
 } from 'lucide-react';
 import ChatPanel from './components/ChatPanel';
 import LeadsPanel from './components/LeadsPanel';
+import CommandPanel from './components/CommandPanel';
 
 interface NodeRow {
   id: string;
@@ -62,6 +64,7 @@ const App: React.FC = () => {
   >(null);
   const [showChat, setShowChat] = useState(false);
   const [showLeads, setShowLeads] = useState(false);
+  const [showCommands, setShowCommands] = useState(false);
 
   // Positions changed since last save (id -> x/y), flushed on a debounce.
   const pendingPositions = useRef<Map<string, NodePosition>>(new Map());
@@ -235,6 +238,7 @@ const App: React.FC = () => {
             onClick={() => {
               setShowChat((v) => !v);
               setShowLeads(false);
+              setShowCommands(false);
             }}
             className={`p-2 transition-colors ${
               showChat ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
@@ -247,6 +251,7 @@ const App: React.FC = () => {
             onClick={() => {
               setShowLeads((v) => !v);
               setShowChat(false);
+              setShowCommands(false);
             }}
             className={`p-2 transition-colors ${
               showLeads ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
@@ -254,6 +259,19 @@ const App: React.FC = () => {
             title="KAREN · Buscar leads"
           >
             <MapPin size={24} />
+          </button>
+          <button
+            onClick={() => {
+              setShowCommands((v) => !v);
+              setShowChat(false);
+              setShowLeads(false);
+            }}
+            className={`p-2 transition-colors ${
+              showCommands ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
+            }`}
+            title="KAREN · Comandos"
+          >
+            <Terminal size={24} />
           </button>
         </div>
         <div className="mt-auto">
@@ -383,6 +401,12 @@ const App: React.FC = () => {
               onClose={() => setShowChat(false)}
               onGraphChanged={refresh}
             />
+          </aside>
+        )}
+
+        {showCommands && (
+          <aside className="w-full md:w-1/2 h-full shrink-0 border-l border-zinc-800 bg-black">
+            <CommandPanel onClose={() => setShowCommands(false)} />
           </aside>
         )}
       </main>

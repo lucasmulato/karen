@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import type { VaultService } from "./vault.js";
 import { NODE_TYPES, EDGE_LABELS } from "./vault.js";
 import type { LeadService } from "./leads.js";
+import type { CommandService } from "./commands.js";
 
 /**
  * Cyber second-brain reasoning layer.
@@ -166,7 +167,7 @@ const TOOLS = [
     function: {
       name: "find_leads",
       description:
-        "Buscar estabelecimentos no Google Maps (via Apify), redigir mensagens 1:1 e salvar os leads. Use quando o usuário pedir clientes, prospects ou restaurantes para abordar.",
+        "Buscar estabelecimentos (padrão: OpenStreetMap, grátis), redigir mensagens 1:1 e salvar os leads. Use quando o usuário pedir clientes, prospects ou restaurantes para abordar.",
       parameters: {
         type: "object",
         properties: {
@@ -176,6 +177,28 @@ const TOOLS = [
           zoom: { type: "integer", description: "Opcional, 1-21. Mais zoom = mais lugares, mais lento." },
         },
         required: ["query", "location"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "request_command",
+      description:
+        "Solicitar a execução de um comando operacional permitido (ex: service_status, logs, restart_llama, build_ui). Comandos de leitura executam na hora; comandos que alteram o sistema exigem aprovação do operador na UI. Nunca tente comandos fora da lista.",
+      parameters: {
+        type: "object",
+        properties: {
+          commandId: {
+            type: "string",
+            enum: [
+              "service_status", "logs", "disk", "memory", "uptime",
+              "certificates", "health", "git_status", "restart_llama",
+              "restart_api", "reload_web", "build_api", "build_ui",
+            ],
+          },
+        },
+        required: ["commandId"],
       },
     },
   },
@@ -190,7 +213,8 @@ export class GraphAgent {
   constructor(
     private readonly config: ChatConfig,
     private readonly vault: VaultService,
-    private readonly leads?: LeadService | null
+    private readonly leads?: LeadService | null,
+    private readonly commands?: CommandService | null
   ) {}
 
   async chat(message: string): Promise<ChatResult> {
@@ -202,7 +226,8 @@ export class GraphAgent {
         : "Nenhum contexto prévio encontrado no grafo para esta pergunta.",
       "Use search_nodes/search_notes para consultar o grafo antes de responder quando fizer sentido; não filtre por 'type' salvo pedido explícito do usuário.",
       "Use add_finding e link_technique para registrar achados e ligá-los a técnicas.",
-      "Use find_leads para buscar prospects no Google Maps e redigir mensagens 1:1 (firstTouch sem link, followUp depois). Nunca envie mensagens — o operador copia e envia.",
+      "Use find_leads para buscar prospects (OSM grátis) e redigir mensagens 1:1 (firstTouch sem link, followUp depois). Nunca envie mensagens — o operador copia e envia.",
+      "Use request_command apenas com IDs da lista permitida. Comandos de leitura rodam automaticamente; mudanças exigem aprovação do operador no painel de comandos. Nunca invente comandos ou argumentos.",
       "Escopo: bug bounty autorizado, labs, CTF, CA e defesa. Você sugere; o operador executa.",
       "Aplique sempre o formato de 4 seções definido no persona, inclusive em perguntas gerais.",
     ].join("\n");
@@ -341,6 +366,11 @@ export class GraphAgent {
             followUp: lead.draft.followUp,
           })),
         });
+      }
+      case "request_command": {
+        if (!this.commands) throw new Error("Comandos não disponíveis.");
+        const result = await this.commands.request(String(args.commandId ?? ""), "agent");
+        return JSON.stringify(result);
       }
       default:
         throw new Error(`Unknown tool: ${call.function.name}`);
