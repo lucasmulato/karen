@@ -43,3 +43,5 @@ deployment.yaml
 synapse-vault.yaml
 demo-infra/
 graphify-out/
+# Generated automation state
+api/data/
