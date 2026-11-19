@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import CanvasView from './CanvasView';
 import MarkdownRead from './MarkdownRead';
+import GraphView, { type GraphData } from './GraphView';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
-import { Eye, FileText, FolderOpen, Home, Leaf, Link2, Network, Pencil, Save } from 'lucide-react';
+import { Eye, FileText, FolderOpen, Home, Leaf, Link2, Network, Pencil, Save, Share2 } from 'lucide-react';
 import { toast } from '../toast';
 
 interface GardenNote {
@@ -25,7 +26,7 @@ interface GardenData {
 }
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
-type Tab = 'hub' | 'files' | 'garden' | 'canvas';
+type Tab = 'hub' | 'files' | 'mapa' | 'garden' | 'canvas';
 
 interface NoteNode {
   path: string;
@@ -76,6 +77,7 @@ const NotesPanel: React.FC = () => {
   const [tagFilter, setTagFilter] = useState('');
   const [readMode, setReadMode] = useState(false);
   const [backlinks, setBacklinks] = useState<NoteNode[]>([]);
+  const [linkPicker, setLinkPicker] = useState<{ prefix: string; typing: boolean } | null>(null);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -104,7 +106,7 @@ const NotesPanel: React.FC = () => {
   }, [typeFilter, tagFilter]);
 
   useEffect(() => {
-    if (tab === 'hub') loadGraph();
+    if (tab === 'hub' || tab === 'mapa') loadGraph();
   }, [tab, loadGraph]);
 
   useEffect(() => {
@@ -230,6 +232,44 @@ const NotesPanel: React.FC = () => {
     return maturity === 'orphan' ? garden.orphans : [];
   }, [garden, maturity]);
 
+  const noteMapData: GraphData | null = useMemo(() => {
+    if (!noteGraph) return null;
+    return {
+      nodes: noteGraph.nodes.map((n) => ({
+        id: n.path,
+        name: n.name,
+        type: n.type,
+        description: `${n.backlinks.length} backlinks · ${n.links.length} links`,
+      })),
+      edges: noteGraph.edges.map((e) => ({
+        source_id: e.source,
+        target_id: e.target,
+        label: 'wikilink',
+      })),
+    };
+  }, [noteGraph]);
+
+  const linkSuggestions = useMemo(() => {
+    const prefix = slug(linkPicker?.prefix ?? '');
+    const names = noteGraph?.nodes.map((n) => ({ name: n.name, path: n.path })) ??
+      files.map((f) => ({ name: f.replace(/\.md$/i, ''), path: f }));
+    const filtered = prefix
+      ? names.filter((n) => slug(n.name).includes(prefix))
+      : names;
+    return filtered.slice(0, 8);
+  }, [linkPicker, noteGraph, files]);
+
+  function insertLink(name: string) {
+    if (linkPicker?.typing) {
+      const next = content.replace(/\[\[([^\]]*)$/, `[[${name}]]`);
+      setContent(next);
+    } else {
+      setContent(`${content.trimEnd()}\n\n[[${name}]]`);
+    }
+    setDirty(true);
+    setLinkPicker(null);
+  }
+
   return (
     <div data-color-mode="dark" className="flex h-full w-full flex-col bg-[#1e1e1e] text-zinc-200">
       <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-4 py-2">
@@ -245,6 +285,12 @@ const NotesPanel: React.FC = () => {
             className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'files' ? 'bg-zinc-800 text-blue-400' : 'text-zinc-500 hover:text-zinc-200'}`}
           >
             <FileText size={14} /> Arquivos
+          </button>
+          <button
+            onClick={() => changeTab('mapa')}
+            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'mapa' ? 'bg-zinc-800 text-cyan-400' : 'text-zinc-500 hover:text-zinc-200'}`}
+          >
+            <Share2 size={14} /> Mapa
           </button>
           <button
             onClick={() => changeTab('garden')}
@@ -423,16 +469,63 @@ const NotesPanel: React.FC = () => {
                 readMode ? (
                   <MarkdownRead content={content} files={files} onOpen={openFile} />
                 ) : (
-                  <MDEditor
-                    value={content}
-                    onChange={(v) => {
-                      setContent(v ?? '');
-                      setDirty(true);
-                    }}
-                    height="100%"
-                    visibleDragbar={false}
-                    textareaProps={{ spellCheck: false }}
-                  />
+                  <div className="flex h-full min-h-0 flex-col">
+                    <div className="flex shrink-0 justify-end border-b border-zinc-800 px-2 py-1">
+                      <button
+                        onClick={() => setLinkPicker({ prefix: '', typing: false })}
+                        className="flex items-center gap-1 rounded border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
+                        title="Inserir wikilink"
+                      >
+                        <Link2 size={11} /> Inserir [[link]]
+                      </button>
+                    </div>
+                    <div className="min-h-0 flex-1">
+                      <MDEditor
+                        value={content}
+                        onChange={(v) => {
+                          const next = v ?? '';
+                          setContent(next);
+                          setDirty(true);
+                          const match = next.match(/\[\[([^\]]*)$/);
+                          if (match) setLinkPicker({ prefix: match[1], typing: true });
+                          else setLinkPicker(null);
+                        }}
+                        height="100%"
+                        visibleDragbar={false}
+                        textareaProps={{ spellCheck: false }}
+                      />
+                    </div>
+                    {linkPicker && (
+                      <div className="shrink-0 border-t border-zinc-800 bg-zinc-950 p-2">
+                        <div className="mb-1 flex items-center justify-between">
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Inserir link</p>
+                          <button onClick={() => setLinkPicker(null)} className="text-[11px] text-zinc-500 hover:text-white">cancelar</button>
+                        </div>
+                        <input
+                          autoFocus
+                          value={linkPicker.prefix}
+                          onChange={(e) => setLinkPicker({ ...linkPicker, prefix: e.target.value })}
+                          placeholder="nome da nota..."
+                          className="mb-1 w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+                        />
+                        <div className="max-h-28 overflow-y-auto">
+                          {linkSuggestions.map((s) => (
+                            <button
+                              key={s.path}
+                              onClick={() => insertLink(s.name)}
+                              className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-[12px] text-zinc-300 hover:bg-zinc-900"
+                            >
+                              <span className="truncate">{s.name}</span>
+                              <span className="ml-2 shrink-0 text-[10px] text-zinc-600">{s.path.split('/')[0]}</span>
+                            </button>
+                          ))}
+                          {linkSuggestions.length === 0 && (
+                            <p className="px-2 py-1 text-[11px] text-zinc-600">Nenhuma nota encontrada.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-2 text-zinc-600">
@@ -464,6 +557,19 @@ const NotesPanel: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {tab === 'mapa' && (
+        <div className="min-h-0 flex-1">
+          {noteMapData ? (
+            <GraphView
+              data={noteMapData}
+              onNodeClick={(node) => openFile(node.id)}
+            />
+          ) : (
+            <p className="p-4 text-xs text-zinc-500">Carregando mapa de notas...</p>
+          )}
         </div>
       )}
 

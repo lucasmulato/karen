@@ -48,6 +48,11 @@ const NODE_COLORS: Record<string, string> = {
   writeup: '#8b5cf6', // purple
   target: '#64748b', // gray
   fix: '#22c55e', // green
+  inbox: '#a1a1aa', // zinc
+  area: '#f59e0b', // amber
+  resource: '#3b82f6', // blue
+  archive: '#71717a', // zinc-dark
+  memory: '#a855f7', // purple
 };
 
 const GraphView: React.FC<GraphViewProps> = ({

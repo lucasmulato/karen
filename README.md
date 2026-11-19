@@ -242,7 +242,9 @@ The notebook button opens a resizable pane with three tabs:
 The **Hub** tab is the landing view: type/tag filters, note stats, most-linked
 notes and clickable `[[wikilinks]]` in read mode (with a backlinks panel).
 `GET /api/notes/graph` and `/api/notes/backlinks` parse frontmatter, `#tags` and
-wikilinks on demand from the plain markdown vault.
+wikilinks on demand from the plain markdown vault. The **Mapa** tab renders that
+note graph with D3 (same legend/tooltip/reset as the main graph), and the editor
+has `[[` autocomplete / "Inserir link".
 
 See `docs/notes-ui-references.md` for the free/MIT projects evaluated.
 
