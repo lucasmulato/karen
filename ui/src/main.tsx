@@ -15,6 +15,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const response = await originalFetch(input, init)
   if (response.status === 401 && !String(input).includes('/api/auth/login')) {
     window.location.href = '/login.html'
+    throw new Error('Sessão expirada — faça login novamente')
   }
   return response
 }
