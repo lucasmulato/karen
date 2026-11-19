@@ -102,15 +102,25 @@ export class VaultFsService {
 
   async list(): Promise<string[]> {
     const out: string[] = [];
-    for (const dir of ["", ...ALLOWED_DIRS]) {
-      const full = dir ? join(this.root, dir) : this.root;
+    // Walk subdirectories so imported vaults (e.g. a second-brain template
+    // nested under 30 Resources) are visible to the Notes UI and link graph.
+    // Hidden directories (.git, .obsidian, .claude) are never notes.
+    const walk = async (full: string, prefix: string): Promise<void> => {
       const entries = await readdir(full, { withFileTypes: true }).catch(() => []);
       for (const entry of entries) {
-        if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
-        out.push(dir ? `${dir}/${entry.name}` : entry.name);
+        if (entry.name.startsWith(".")) continue;
+        const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) {
+          await walk(join(full, entry.name), relative);
+        } else if (entry.isFile() && entry.name.endsWith(".md")) {
+          out.push(relative);
+        }
       }
+    };
+    for (const dir of ["", ...ALLOWED_DIRS]) {
+      await walk(dir ? join(this.root, dir) : this.root, dir);
     }
-    return out.sort();
+    return [...new Set(out)].sort();
   }
 
   async read(relative: string): Promise<string> {
