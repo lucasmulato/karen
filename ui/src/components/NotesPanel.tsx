@@ -207,6 +207,40 @@ const NotesPanel: React.FC = () => {
     }
   }
 
+  async function syncGraph() {
+    try {
+      const res = await fetch(`${API_BASE}/notes/sync`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      toast(`Grafo sincronizado: ${data.notes} notas, ${data.edges} arestas`);
+      loadGraph();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function connectNote(node: NoteNode) {
+    try {
+      const res = await fetch(`${API_BASE}/notes/content?path=${encodeURIComponent(node.path)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const next = withFrontmatter(data.content ?? '', {
+        ...parseMeta(data.content ?? ''),
+        graphId: crypto.randomUUID(),
+      });
+      const put = await fetch(`${API_BASE}/notes/content`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: node.path, content: next }),
+      });
+      if (!put.ok) throw new Error(`HTTP ${put.status}`);
+      toast(`Conectada ao grafo: ${node.name}`);
+      loadGraph();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   async function saveMeta() {
     if (!selected) return;
     const next = withFrontmatter(content, meta);
@@ -458,7 +492,14 @@ const NotesPanel: React.FC = () => {
                 )}
               </div>
 
-              {noteGraph.stats.mostLinked.some((n) => n.count > 0) && (
+              <button
+                 onClick={syncGraph}
+                 className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-blue-800 bg-blue-950/30 py-2 text-[12px] text-blue-300 hover:border-blue-500"
+               >
+                 <Network size={13} /> Sincronizar notas com o grafo
+               </button>
+
+               {noteGraph.stats.mostLinked.some((n) => n.count > 0) && (
                 <section className="space-y-1.5">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-500">
                     <Link2 size={12} /> Mais conectadas
@@ -479,10 +520,13 @@ const NotesPanel: React.FC = () => {
               <section className="space-y-1.5">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Notas</p>
                 {noteGraph.nodes.map((n) => (
-                  <button
+                  <div
                     key={n.path}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => openFile(n.path)}
-                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-left hover:border-blue-600"
+                    onKeyDown={(e) => { if (e.key === 'Enter') openFile(n.path); }}
+                    className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-left hover:border-blue-600"
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-xs text-zinc-200">{n.name}</span>
@@ -490,8 +534,18 @@ const NotesPanel: React.FC = () => {
                         {n.type} · {n.backlinks.length} backlinks · {n.links.length} links
                       </span>
                     </span>
-                    <span className="shrink-0 text-[10px] text-zinc-600">{n.path.split('/')[0]}</span>
-                  </button>
+                    {n.graphId ? (
+                      <span className="shrink-0 rounded border border-emerald-800 px-1.5 py-0.5 text-[10px] text-emerald-400" title="Sincronizada com o grafo">grafo</span>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); connectNote(n); }}
+                        className="shrink-0 rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
+                        title="Gerar graph_id e conectar ao grafo"
+                      >
+                        Conectar
+                      </button>
+                    )}
+                  </div>
                 ))}
                 {noteGraph.nodes.length === 0 && (
                   <p className="text-xs text-zinc-600">Nenhuma nota com esses filtros.</p>

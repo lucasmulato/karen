@@ -242,7 +242,9 @@ The notebook button opens a resizable pane with three tabs:
 The **Hub** tab is the landing view: type/tag filters, note stats, most-linked
 notes and clickable `[[wikilinks]]` in read mode (with a backlinks panel).
 `GET /api/notes/graph` and `/api/notes/backlinks` parse frontmatter, `#tags` and
-wikilinks on demand from the plain markdown vault. The **Mapa** tab renders that
+wikilinks on demand from the plain markdown vault. Run
+`node api/scripts/seed-vault.mjs` to populate a small interconnected starter
+vault (idempotent — existing notes are never overwritten). The **Mapa** tab renders that
 note graph with D3 (same legend/tooltip/reset as the main graph), and the editor
 has `[[` autocomplete / "Inserir link". A note with `graph_id: <uuid>` in its
 frontmatter is synced into the Postgres graph by `POST /api/notes/sync`, with
