@@ -10,7 +10,7 @@ import http from "node:http";
 import { VaultService, NODE_TYPES, EDGE_LABELS } from "./services/vault.js";
 import { GraphAgent, chatConfigFromEnv } from "./services/agent.js";
 import { EmbeddingService, embeddingConfigFromEnv } from "./services/embeddings.js";
-import { ApifyService, apifyConfigFromEnv } from "./services/apify.js";
+import { leadProviderFromEnv } from "./services/providers.js";
 import { LeadService } from "./services/leads.js";
 
 // 1. Database Connection
@@ -37,10 +37,13 @@ const vault = new VaultService(client, embeddings);
 
 // KAREN lead engine. Cloud Apify keeps the token server-side; when unconfigured
 // the endpoints return a clear 503 instead of failing at request time.
-const apifyConfig = apifyConfigFromEnv();
-const leads = new LeadService(client, apifyConfig ? new ApifyService(apifyConfig) : null, {
-  operatorName: apifyConfig?.operatorName ?? "[Seu Nome]",
-  exampleLink: apifyConfig?.exampleLink ?? "[LINK DO SEU CARDAPIFY DE EXEMPLO]",
+const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
+const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
+const leadProvider = leadProviderFromEnv();
+const leads = new LeadService(client, leadProvider, {
+  operatorName: process.env.OPERATOR_NAME?.trim() || "[Seu Nome]",
+  exampleLink:
+    process.env.KAREN_EXAMPLE_LINK?.trim() || "[LINK DO SEU CARDAPIFY DE EXEMPLO]",
 });
 
 // Optional reasoning layer: only constructed when LLM_API_KEY is set.
@@ -326,13 +329,23 @@ async function handleHttp(
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
   const path = url.pathname;
 
-  // CORS for local dev
-  res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader(
-      "Access-Control-Allow-Methods",
-      "GET, POST, PATCH, OPTIONS"
-    );
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // Shared-secret auth. OpenResty injects X-KAREN-KEY into proxied /api/*
+  // requests; direct :3000 access is blocked by the firewall. /api/health
+  // stays public for monitoring.
+  const apiKey = process.env.KAREN_API_KEY?.trim();
+  if (apiKey && path !== "/api/health" && req.headers["x-karen-key"] !== apiKey) {
+    sendJson(res, 401, { error: "Unauthorized" });
+    return;
+  }
+
+  // No wildcard CORS by default — the UI is served from the same origin.
+  // Set CORS_ORIGIN explicitly only if a separate front-end needs access.
+  const corsOrigin = process.env.CORS_ORIGIN?.trim();
+  if (corsOrigin) {
+    res.setHeader("Access-Control-Allow-Origin", corsOrigin);
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Karen-Key");
+  }
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);
@@ -458,14 +471,15 @@ async function handleHttp(
 
     if (req.method === "GET" && path === "/api/leads/estimate") {
       const maxPlaces = Math.min(
-        Math.max(Number(url.searchParams.get("maxPlaces") ?? apifyConfig?.maxPlaces ?? 50), 1),
+        Math.max(Number(url.searchParams.get("maxPlaces") ?? MAX_PLACES), 1),
         200
       );
       sendJson(res, 200, {
         configured: leads.configured,
+        provider: leads.providerName,
         maxPlaces,
         estimatedCostUsd: leads.estimate(maxPlaces),
-        websiteFilter: apifyConfig?.websiteFilter ?? "placesWithoutWebsite",
+        websiteFilter: WEBSITE_FILTER,
       });
       return;
     }
@@ -509,8 +523,9 @@ async function handleHttp(
         embeddings: embeddings ? embeddings.model : null,
         leads: {
           configured: leads.configured,
-          websiteFilter: apifyConfig?.websiteFilter ?? "placesWithoutWebsite",
-          maxPlaces: apifyConfig?.maxPlaces ?? 50,
+          provider: leads.providerName,
+          websiteFilter: WEBSITE_FILTER,
+          maxPlaces: MAX_PLACES,
         },
       });
       return;

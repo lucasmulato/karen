@@ -214,7 +214,7 @@ const LeadsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       <form onSubmit={run} className="px-5 py-4 border-b border-zinc-800 flex flex-col gap-3 shrink-0">
         {status && !status.configured && (
           <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/50 rounded-lg p-2">
-            leads desativado: configure <code className="text-amber-200">APIFY_TOKEN</code> no ambiente da API.
+            leads desativado: configure <code className="text-amber-200">LEAD_PROVIDER=osm</code> no ambiente da API.
           </div>
         )}
         <div className="grid grid-cols-2 gap-3">

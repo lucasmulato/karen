@@ -160,38 +160,39 @@ Mutating routes are rate limited (60 requests/min/IP) and validated with zod.
 
 ## KAREN (cyber + lead-gen assistant)
 
-KAREN is the assistant name; the repo remains SynapseVault. The persona
+KAREN is the assistant name and this repo is its home. The persona
 (`api/prompts/karen.md`) keeps the strict 4-section technical answers and adds
-a prospecção mode: find local businesses on Google Maps and draft two 1:1
-WhatsApp messages per lead (first touch **without** a link, follow-up for
-24–48h later). Messages are **draft + copy only** — nothing is sent by the app.
+a prospecção mode: find local businesses and draft two 1:1 WhatsApp messages
+per lead (first touch **without** a link, follow-up for 24–48h later). Messages
+are **draft + copy only** — nothing is sent by the app.
 
-### Enabling the lead engine
+### Lead sources
 
-1. Create an Apify token at https://console.apify.com/settings/integrations.
-2. Put it in the API environment (`/home/admin/models/karen.env` on this box,
-   or `api/.env` elsewhere):
+The default provider is **OpenStreetMap** (Nominatim for geocoding + Overpass
+for the query): free, no API key, no per-result charge. It returns public
+business data — name, category, address, phone if tagged, website if tagged.
+Data completeness varies by region; in Guarulhos most places have no phone tag,
+so leads may need a manual number lookup before outreach.
 
-   ```bash
-   APIFY_TOKEN=apify_api_...
-   APIFY_MAX_PLACES=50                  # hard ceiling, 1-200
-   APIFY_WEBSITE_FILTER=placesWithoutWebsite
-   OPERATOR_NAME=Seu Nome
-   KAREN_EXAMPLE_LINK=https://...       # used only in the follow-up
-   ```
+To use the paid Google Maps scraper instead:
 
-3. Restart the API. `GET /api/chat/status` should show
-   `leads.configured: true`. Click the map-pin button in the UI, or ask in
-   chat: *"busca restaurantes sem site em Guarulhos"*.
+```bash
+LEAD_PROVIDER=apify
+APIFY_TOKEN=apify_api_...
+APIFY_MAX_PLACES=50                  # hard ceiling, 1-200
+APIFY_WEBSITE_FILTER=placesWithoutWebsite
+OPERATOR_NAME="Seu Nome"
+KAREN_EXAMPLE_LINK=https://...       # used only in the follow-up
+```
 
-Base cost is US$1.50 per 1,000 scraped places (~US$0.08 for 50). Reviews,
+Apify costs US$1.50 per 1,000 scraped places (~US$0.08 for 50). Reviews,
 contact/social enrichment and competitor analysis are explicitly disabled —
-enabling them can raise a run by 40–100x. Leads are deduplicated by Google
-`placeId`; suppressed leads are skipped on re-runs.
+enabling them can raise a run by 40–100x. Leads are deduplicated by provider ID
+(`osm:node/...` or Google `placeId`); suppressed leads are skipped on re-runs.
 
 ### Always-on runtime (this VPS)
 
-Two systemd units with `Restart=always` replace the old nohup processes:
+Two systemd units with `Restart=always` run from this repo:
 
 ```bash
 sudo systemctl status karen-llama karen-api     # -a karen on :8080, API on :3000
@@ -200,22 +201,24 @@ sudo journalctl -u karen-api -f
 
 The env file is `/home/admin/models/karen.env` (mode 600, outside the repo).
 
-### Public API + Vercel UI
+### Public access + security
 
-The UI is a static Vite build with no secrets in it; set `VITE_API_URL` to the
-public API origin. The OpenResty vhost `/etc/openresty/available/karen.conf`
-is staged on :80 only until the certificate exists. Remaining steps:
+- Hostname: `https://karen.164.68.109.252.sslip.io/` — free wildcard DNS
+  (sslip.io maps the embedded IP to the VPS); no owned domain required.
+- TLS: free Let's Encrypt cert via certbot; renewal is handled by
+  `certbot-renew.timer`.
+- OpenResty vhost: `/etc/openresty/available/karen.conf`. It serves the built UI
+  from `/var/www/karen-ui` (copy `ui/dist` there after a rebuild) and proxies
+  `/api/*` to `127.0.0.1:3000`.
+- **HTTP Basic auth** protects the whole HTTPS vhost (credentials are in
+  `/home/admin/models/karen-web-password`, mode 600). The :80 server is left
+  open only for ACME challenges and the HTTPS redirect.
+- Defense in depth: the API also requires `X-Karen-Key`, injected by OpenResty
+  into proxied requests from `KAREN_API_KEY` in the env file. Direct :3000
+  access is firewalled. CORS is not wildcard by default.
 
-1. Add DNS: `karen.disc4all.eu` → `164.68.109.252`.
-2. `sudo certbot certonly --webroot -w /var/www/acme -d karen.disc4all.eu`
-3. Uncomment the :443 block in `karen.conf`, then
-   `sudo /opt/openresty/bin/openresty -t && sudo systemctl reload openresty`.
-4. Deploy `ui/` to Vercel (root directory `ui`), set
-   `VITE_API_URL=https://karen.disc4all.eu`.
-
-Only `/api/*` is proxied; the MCP stdio surface stays local. Note that a
-scrape is a long request (minutes), so the button shows a spinner while the
-browser waits — no Vercel function is involved in the scrape.
+Only `/api/*` is proxied; the MCP stdio surface stays local. A scrape can take
+minutes, so the button shows a spinner while the browser waits.
 
 ## Development
 

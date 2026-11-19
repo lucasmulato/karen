@@ -317,7 +317,7 @@ export class GraphAgent {
       case "find_leads": {
         if (!this.leads?.configured) {
           throw new Error(
-            "Busca de leads indisponível: defina APIFY_TOKEN no ambiente da API."
+            "Busca de leads indisponível: verifique LEAD_PROVIDER no ambiente da API."
           );
         }
         const result = await this.leads.scrape({

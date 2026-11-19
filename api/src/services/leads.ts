@@ -4,12 +4,8 @@
  * find_leads tool, so chat and button always produce the same result.
  */
 import type { Client } from "pg";
-import {
-  ApifyService,
-  estimateCost,
-  type LeadQuery,
-  type ScrapedPlace,
-} from "./apify.js";
+import type { LeadQuery, ScrapedPlace } from "./apify.js";
+import type { LeadProvider } from "./providers.js";
 import { draftFor, type DraftContext, type OutreachDraft } from "../templates/outreach.js";
 
 export interface LeadRow {
@@ -67,25 +63,29 @@ function mapRow(row: any): LeadRow {
 export class LeadService {
   constructor(
     private readonly client: Client,
-    private readonly apify: ApifyService | null,
+    private readonly provider: LeadProvider | null,
     private readonly ctx: DraftContext
   ) {}
 
   get configured(): boolean {
-    return this.apify !== null;
+    return this.provider !== null;
+  }
+
+  get providerName(): string | null {
+    return this.provider?.name ?? null;
   }
 
   estimate(maxPlaces: number): number {
-    return estimateCost(maxPlaces);
+    return this.provider?.estimateCost(maxPlaces) ?? 0;
   }
 
   async scrape(query: LeadQuery): Promise<LeadRunResult> {
-    if (!this.apify) {
+    if (!this.provider) {
       throw new Error(
-        "Leads are disabled: set APIFY_TOKEN in the API environment."
+        "Leads are disabled: set LEAD_PROVIDER=osm (or apify with APIFY_TOKEN)."
       );
     }
-    const result = await this.apify.findPlaces(query);
+    const result = await this.provider.findPlaces(query);
     const leads: LeadRow[] = [];
     let added = 0;
     let deduped = 0;

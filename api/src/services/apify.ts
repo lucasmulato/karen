@@ -77,7 +77,12 @@ export function estimateCost(maxPlaces: number): number {
 }
 
 export class ApifyService {
+  readonly name = "apify";
   constructor(private readonly config: ApifyConfig) {}
+
+  estimateCost(maxPlaces: number): number {
+    return estimateCost(maxPlaces);
+  }
 
   private async api<T>(path: string, init?: RequestInit): Promise<T> {
     const url = `${API_BASE}${path}${path.includes("?") ? "&" : "?"}token=${encodeURIComponent(this.config.token)}`;
