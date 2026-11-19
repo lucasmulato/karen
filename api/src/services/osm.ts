@@ -17,6 +17,16 @@ export interface OsmConfig {
 
 const USER_AGENT = "KAREN-SynapseVault/1.0 (local lead generation)";
 
+// Public mirrors tried in order when the primary instance is at capacity.
+const FALLBACK_MIRRORS = [
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
+];
+const CACHE_TTL_MS = 10 * 60_000;
+const resultCache = new Map<string, { places: ScrapedPlace[]; expires: number }>();
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export function osmConfigFromEnv(): OsmConfig {
   const radius = Number(process.env.OSM_RADIUS_M ?? 3000);
   const maxPlaces = Number(process.env.APIFY_MAX_PLACES ?? 50);
@@ -56,6 +66,46 @@ export class OsmService {
 
   estimateCost(_maxPlaces: number): number {
     return 0;
+  }
+
+  /** Query Overpass with backoff + mirror fallback. Free, no API key. */
+  private async queryWithRetry(ql: string): Promise<any[]> {
+    // Retry the global primary first — a transient 502 is the common case.
+    // Mirrors are regional: an empty result from one is not trustworthy.
+    const urls = [
+      this.config.overpassUrl,
+      this.config.overpassUrl,
+      this.config.overpassUrl,
+      ...FALLBACK_MIRRORS.filter((u) => u !== this.config.overpassUrl),
+    ].slice(0, 5);
+    for (let attempt = 0; attempt < urls.length; attempt++) {
+      const url = urls[attempt];
+      const isPrimary = url === this.config.overpassUrl;
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": USER_AGENT,
+          },
+          body: `data=${encodeURIComponent(ql)}`,
+          signal: AbortSignal.timeout(isPrimary ? 20_000 : 8_000),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const elements: any[] = (await res.json()).elements ?? [];
+        if (elements.length > 0 || isPrimary) return elements;
+        // Empty mirror response: try the next one instead of caching a false zero.
+      } catch {
+        // backoff below
+      }
+      if (attempt < urls.length - 1) {
+        const backoff = 1000 * Math.pow(1.6, attempt) + Math.random() * 300;
+        await sleep(backoff);
+      }
+    }
+    throw new Error(
+      "Overpass está com capacidade cheia ou inacessível no momento. Tente novamente em instantes."
+    );
   }
 
   private async geocode(location: string): Promise<{ lat: number; lon: number; label: string }> {
@@ -113,27 +163,47 @@ export class OsmService {
       Math.max(Math.trunc(query.maxPlaces ?? this.config.maxPlaces), 1),
       this.config.maxPlaces
     );
+    const website = query.website ?? this.config.websiteFilter;
+    const cacheKey = [
+      query.query,
+      query.location,
+      this.config.radiusMeters,
+      website,
+      max,
+    ].join("|");
+    const cached = resultCache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) {
+      return {
+        places: cached.places,
+        estimatedCostUsd: 0,
+        datasetId: null,
+        runId: `osm-cache-${Date.now()}`,
+      };
+    }
+
     const amenity = amenityRegex(query.query);
     const selector = amenity
       ? `["amenity"~"${amenity}"]`
       : `["name"~"${escapeRegex(query.query)}",i]`;
-    const q = `[out:json][timeout:60];(nwr${selector}(around:${this.config.radiusMeters},${geo.lat},${geo.lon}););out center tags;`;
-
-    const res = await fetch(this.config.overpassUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": USER_AGENT,
-      },
-      body: `data=${encodeURIComponent(q)}`,
-      signal: AbortSignal.timeout(120_000),
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Overpass error ${res.status}: ${body.slice(0, 200)}`);
+    // Limit what the server returns — we only need a small multiple of max.
+    const outLimit = Math.min(max * 2, 300);
+    const q = `[out:json][timeout:60];(nwr${selector}(around:${this.config.radiusMeters},${geo.lat},${geo.lon}););out center tags ${outLimit};`;
+    let elements: any[];
+    try {
+      elements = await this.queryWithRetry(q);
+    } catch (err) {
+      // Serve a recent result if Overpass is down — better than a hard fail.
+      const stale = resultCache.get(cacheKey);
+      if (stale && Date.now() - (stale.expires - CACHE_TTL_MS) < 60 * 60_000) {
+        return {
+          places: stale.places,
+          estimatedCostUsd: 0,
+          datasetId: null,
+          runId: `osm-stale-${Date.now()}`,
+        };
+      }
+      throw err;
     }
-    const json: any = await res.json();
-    const elements: any[] = json.elements ?? [];
 
     const seen = new Set<string>();
     const places: ScrapedPlace[] = [];
@@ -144,6 +214,8 @@ export class OsmService {
       places.push(place);
       if (places.length >= max) break;
     }
+    if (resultCache.size > 100) resultCache.clear();
+    resultCache.set(cacheKey, { places, expires: Date.now() + CACHE_TTL_MS });
     return {
       places,
       estimatedCostUsd: 0,

@@ -293,6 +293,10 @@ const LeadsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       {error && (
         <div className="mx-5 mt-3 text-xs text-red-300 bg-red-950/40 border border-red-800/50 rounded-lg p-3 shrink-0">
           {error}
+          <p className="mt-1 text-[10px] text-red-400/70">
+            Os dados vêm do OpenStreetMap (grátis). Se o serviço estiver ocupado,
+            a KAREN tenta outros servidores e você pode repetir em instantes.
+          </p>
         </div>
       )}
 
