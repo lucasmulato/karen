@@ -473,7 +473,21 @@ async function handleHttp(
 
     if (req.method === "GET" && path === "/api/graph") {
       const graph = await vault.getGraph();
-      sendJson(res, 200, graph);
+      const excludeNotes = url.searchParams.get("exclude_notes") === "true";
+      if (!excludeNotes) {
+        sendJson(res, 200, graph);
+        return;
+      }
+      const nodes = graph.nodes.filter(
+        (n) => n.source !== "note:bridge" && n.properties?.source !== "markdown-vault"
+      );
+      const ids = new Set(nodes.map((n) => n.id));
+      sendJson(res, 200, {
+        nodes,
+        edges: graph.edges.filter(
+          (e) => ids.has(e.source_id) && ids.has(e.target_id)
+        ),
+      });
       return;
     }
 

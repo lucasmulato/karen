@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Link2,
   MapPin,
+  Network,
   NotebookPen,
   Terminal,
   X,
@@ -76,7 +77,8 @@ const App: React.FC = () => {
   const [showChat, setShowChat] = useState(false);
   const [showLeads, setShowLeads] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
-  const [showNotes, setShowNotes] = useState(false);
+  const [mainView, setMainView] = useState<'notes' | 'graph'>('notes');
+  const [showNoteNodes, setShowNoteNodes] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [paneWidth, setPaneWidth] = useState<number>(() => {
@@ -93,13 +95,14 @@ const App: React.FC = () => {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/graph`);
+      const query = showNoteNodes ? '' : '?exclude_notes=true';
+      const res = await fetch(`${API_BASE}/graph${query}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setData(await res.json());
     } catch (err) {
       console.error('Failed to load graph:', err);
     }
-  }, []);
+  }, [showNoteNodes]);
 
   useEffect(() => {
     refresh();
@@ -121,7 +124,6 @@ const App: React.FC = () => {
         setShowChat(false);
         setShowLeads(false);
         setShowCommands(false);
-        setShowNotes(false);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -267,7 +269,6 @@ const App: React.FC = () => {
     setShowChat(false);
     setShowLeads(false);
     setShowCommands(false);
-    setShowNotes(false);
     setSelectedNode({
       id: node.id,
       name: node.name,
@@ -371,7 +372,6 @@ const App: React.FC = () => {
               setShowChat((v) => !v);
               setShowLeads(false);
               setShowCommands(false);
-              setShowNotes(false);
               setSidebarOpen(false);
             }}
             className={`p-2 transition-colors ${
@@ -386,7 +386,6 @@ const App: React.FC = () => {
               setShowLeads((v) => !v);
               setShowChat(false);
               setShowCommands(false);
-              setShowNotes(false);
               setSidebarOpen(false);
             }}
             className={`p-2 transition-colors ${
@@ -401,7 +400,6 @@ const App: React.FC = () => {
               setShowCommands((v) => !v);
               setShowChat(false);
               setShowLeads(false);
-              setShowNotes(false);
               setSidebarOpen(false);
             }}
             className={`p-2 transition-colors ${
@@ -412,17 +410,20 @@ const App: React.FC = () => {
             <Terminal size={24} />
           </button>
           <button
-            onClick={() => {
-              setShowNotes((v) => !v);
-              setShowChat(false);
-              setShowLeads(false);
-              setShowCommands(false);
-              setSidebarOpen(false);
-            }}
+            onClick={() => setMainView('graph')}
             className={`p-2 transition-colors ${
-              showNotes ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
+              mainView === 'graph' ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
             }`}
-            title="KAREN · Notas"
+            title="Visão do grafo"
+          >
+            <Network size={24} />
+          </button>
+          <button
+            onClick={() => setMainView('notes')}
+            className={`p-2 transition-colors ${
+              mainView === 'notes' ? 'text-blue-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
+            }`}
+            title="Visão de notas"
           >
             <NotebookPen size={24} />
           </button>
@@ -445,12 +446,35 @@ const App: React.FC = () => {
         style={{ '--chat-width': `${paneWidth}%` } as React.CSSProperties}
       >
         <div className="relative flex-1 min-w-0 h-full">
-        <header className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center pointer-events-none z-10">
-          <div className="pointer-events-auto flex items-center gap-3 bg-black/50 backdrop-blur-md px-4 py-2 rounded-full border border-zinc-800 shadow-xl">
+        <header className="absolute top-0 left-0 right-0 p-4 flex items-start justify-between gap-3 pointer-events-none z-10">
+          <div className="pointer-events-auto flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-2 rounded-full border border-zinc-800 shadow-xl">
             <h1 className="text-sm font-medium tracking-wider uppercase text-zinc-400">
               KAREN <span className="text-zinc-600 px-2">//</span>{' '}
               <span className="text-blue-400">Cyber &amp; Leads</span>
             </h1>
+            <div className="flex overflow-hidden rounded-lg border border-zinc-700">
+              <button
+                onClick={() => setMainView('notes')}
+                className={`flex items-center gap-1 px-2.5 py-1 text-[11px] ${mainView === 'notes' ? 'bg-zinc-800 text-blue-300' : 'text-zinc-500 hover:text-zinc-200'}`}
+              >
+                <NotebookPen size={12} /> Notas
+              </button>
+              <button
+                onClick={() => setMainView('graph')}
+                className={`flex items-center gap-1 px-2.5 py-1 text-[11px] ${mainView === 'graph' ? 'bg-zinc-800 text-blue-300' : 'text-zinc-500 hover:text-zinc-200'}`}
+              >
+                <Network size={12} /> Grafo
+              </button>
+            </div>
+            {mainView === 'graph' && (
+              <button
+                onClick={() => setShowNoteNodes((v) => !v)}
+                className={`rounded-full border px-2.5 py-1 text-[11px] ${showNoteNodes ? 'border-blue-500 text-blue-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
+                title="Mostrar ou ocultar notas do Obsidian no grafo"
+              >
+                Notas do Obsidian {showNoteNodes ? 'on' : 'off'}
+              </button>
+            )}
             <button
               onClick={exportCanvas}
               className="text-zinc-500 hover:text-blue-400 transition-colors"
@@ -472,22 +496,23 @@ const App: React.FC = () => {
             </label>
           </div>
 
-          <div className="pointer-events-auto absolute left-6 top-16 hidden lg:block">
+          <div className="pointer-events-auto hidden pt-1 lg:block">
             <HealthStrip />
           </div>
 
           {showSearch && (
             <GraphSearch
               onClose={() => setShowSearch(false)}
-              onSelect={(row) =>
+              onSelect={(row) => {
+                setMainView('graph');
                 handleNodeClick({
                   id: row.id,
                   name: row.name,
                   type: row.type,
                   description: row.description ?? null,
                   properties: {},
-                })
-              }
+                });
+              }}
             />
           )}
 
@@ -584,16 +609,26 @@ const App: React.FC = () => {
             )}
         </Dialog>
 
-        <GraphView
-          data={data}
-          initialPositions={initialPositions}
-          onNodePosition={handleNodePosition}
-          highlightId={connect?.source ?? null}
-          onNodeClick={handleNodeClick}
-        />
+        {mainView === 'notes' ? (
+          <div className="absolute inset-x-0 bottom-0 top-16">
+            <React.Suspense
+              fallback={<div className="flex h-full items-center justify-center text-xs text-zinc-500">Carregando notas...</div>}
+            >
+              <NotesPanel />
+            </React.Suspense>
+          </div>
+        ) : (
+          <GraphView
+            data={data}
+            initialPositions={initialPositions}
+            onNodePosition={handleNodePosition}
+            highlightId={connect?.source ?? null}
+            onNodeClick={handleNodeClick}
+          />
+        )}
         </div>
 
-        {(showChat || showCommands || showNotes || showLeads) && (
+        {(showChat || showCommands || showLeads) && (
           <div
             role="separator"
             aria-orientation="vertical"
@@ -613,7 +648,7 @@ const App: React.FC = () => {
           />
         )}
 
-        {(showChat || showLeads || showCommands || showNotes) && (
+        {(showChat || showLeads || showCommands) && (
           <aside className="w-full md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 md:border-l-0 bg-black">
             {showChat && (
               <WorkspacePane
@@ -645,19 +680,6 @@ const App: React.FC = () => {
               </WorkspacePane>
             )}
 
-            {showNotes && (
-              <WorkspacePane
-                title="Notas"
-                subtitle="Vault Markdown · jardim · canvas"
-                onClose={() => setShowNotes(false)}
-              >
-                <React.Suspense
-                  fallback={<div className="flex h-full items-center justify-center text-xs text-zinc-500">Carregando notas...</div>}
-                >
-                  <NotesPanel />
-                </React.Suspense>
-              </WorkspacePane>
-            )}
           </aside>
         )}
       </main>

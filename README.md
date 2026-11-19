@@ -127,9 +127,13 @@ For the configured local stack (llama.cpp + PostgreSQL + API), run
 - **Connect Nodes**: Click the link icon in the sidebar, pick source node →
   relationship label → target node to create an edge.
 - **Persistent Layout**: Drag nodes into place — positions survive reloads.
-- **Unified workspace**: Chat, Leads, Commands and Notes share one docked,
-  resizable pane; Add/Connect use modal dialogs. Clicking a node closes the pane
-  and shows the detail sidebar. `Esc` closes, `/` opens graph search.
+- **Views**: the app opens on the full-width **Notes Hub**. A `Notas | Grafo`
+  switch in the header changes the main view. In Grafo, "Notas do Obsidian" is
+  off by default (`GET /api/graph?exclude_notes=true`) so bridged markdown notes
+  don't mix with the security graph; the toggle brings them back.
+- **Unified workspace**: Chat, Leads and Commands share one docked, resizable
+  pane available in both views. Add/Connect use modal dialogs. Clicking a node
+  shows the detail sidebar. `Esc` closes, `/` opens graph search.
 - **Legibility**: larger type scale, graph legend + hover tooltip + "Centralizar",
   canvas auto-fit, toast notifications instead of browser alerts.
 - **Health strip + quick prompts**: The header shows live API / KAREN / DB / TLS
