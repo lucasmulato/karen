@@ -206,6 +206,17 @@ export class VaultService {
     return res.rows;
   }
 
+  /** Search only the ingested security knowledge base. */
+  async searchKb(query: string, limit = 10): Promise<NodeRow[]> {
+    const res = await this.client.query(
+      `SELECT ${NODE_COLUMNS} FROM nodes
+        WHERE source LIKE 'kb:%' AND (name ILIKE $1 OR description ILIKE $1)
+        ORDER BY name LIMIT $2`,
+      [`%${query}%`, Math.min(Math.trunc(limit) || 10, 30)]
+    );
+    return res.rows;
+  }
+
   /** Reciprocal rank fusion keeps both lexical and semantic hits. */
   private rrfMerge(
     keyword: NodeRow[],
@@ -268,7 +279,12 @@ export class VaultService {
    * their 1-hop relationships. Keeps the local model's prompt small.
    */
   async contextForQuestion(question: string, maxChars = 6000): Promise<string> {
-    const nodes = await this.searchNodes(question, undefined, 8);
+    const all = await this.searchNodes(question, undefined, 12);
+    // KB chunks belong to search_kb, not to the ambient context — otherwise
+    // the local model's prompt explodes and generation takes minutes.
+    const nodes = all
+      .filter((n) => !String(n.source ?? "").startsWith("kb:"))
+      .slice(0, 6);
     if (nodes.length === 0) return "";
     let output = "";
     for (const node of nodes) {

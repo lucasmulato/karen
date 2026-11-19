@@ -272,6 +272,37 @@ const TOOLS = [
       parameters: { type: "object", properties: {} },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "search_kb",
+      description:
+        "Buscar na base de conhecimento de segurança (OWASP, MITRE, PayloadsAllTheThings). Use PRIMEIRO para qualquer pergunta de cibersegurança.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Termo ou pergunta curta" },
+          limit: { type: "integer", description: "Quantidade de trechos (padrão 4, máximo 30)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "lookup_cve",
+      description:
+        "Consultar uma CVE específica na NVD (grátis). Use quando o usuário citar um ID CVE.",
+      parameters: {
+        type: "object",
+        properties: {
+          cveId: { type: "string", description: "Ex: CVE-2024-1234" },
+        },
+        required: ["cveId"],
+      },
+    },
+  },
 ];
 
 export interface ChatResult {
@@ -475,6 +506,51 @@ export class GraphAgent {
       case "garden_report": {
         if (!this.garden) throw new Error("Relatório do jardim indisponível.");
         return await this.garden.report();
+      }
+      case "search_kb": {
+        const rows = await this.vault.searchKb(
+          String(args.query ?? ""),
+          args.limit ? Number(args.limit) : 4
+        );
+        if (rows.length === 0) return "NENHUM_RESULTADO_KB";
+        return JSON.stringify(
+          rows.map((r) => ({
+            source: r.source,
+            title: r.name,
+            content: String(r.description ?? "").slice(0, 700),
+            url: (r.properties as any)?.url ?? null,
+          }))
+        );
+      }
+      case "lookup_cve": {
+        const cveId = String(args.cveId ?? "").trim().toUpperCase();
+        if (!/^CVE-\d{4}-\d{4,}$/.test(cveId)) throw new Error("ID CVE inválido.");
+        const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${encodeURIComponent(cveId)}`;
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "KAREN-KB/1.0",
+            ...(process.env.NVD_API_KEY
+              ? { apiKey: process.env.NVD_API_KEY }
+              : {}),
+          },
+          signal: AbortSignal.timeout(20_000),
+        });
+        if (!res.ok) throw new Error(`NVD ${res.status}`);
+        const json: any = await res.json();
+        const item = json.vulnerabilities?.[0]?.cve;
+        if (!item) return `CVE ${cveId} não encontrada na NVD.`;
+        const description =
+          item.descriptions?.find((d: any) => d.lang === "en")?.value ?? "";
+        const cvss = item.metrics?.cvssMetricV31?.[0]?.cvssData ??
+          item.metrics?.cvssMetricV30?.[0]?.cvssData;
+        return JSON.stringify({
+          cveId: item.id,
+          published: item.published,
+          description,
+          cvss: cvss ? { score: cvss.baseScore, vector: cvss.vectorString } : null,
+          reference: `https://nvd.nist.gov/vuln/detail/${item.id}`,
+          attribution: "Source: NVD / NIST (public domain)",
+        });
       }
       default:
         throw new Error(`Unknown tool: ${call.function.name}`);

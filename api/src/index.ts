@@ -479,7 +479,10 @@ async function handleHttp(
         return;
       }
       const nodes = graph.nodes.filter(
-        (n) => n.source !== "note:bridge" && n.properties?.source !== "markdown-vault"
+        (n) =>
+          n.source !== "note:bridge" &&
+          !String(n.source ?? "").startsWith("kb:") &&
+          n.properties?.source !== "markdown-vault"
       );
       const ids = new Set(nodes.map((n) => n.id));
       sendJson(res, 200, {
@@ -686,6 +689,19 @@ async function handleHttp(
       } catch (err: any) {
         sendJson(res, 500, { error: err.message });
       }
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/kb/status") {
+      const sources = await client.query(
+        `SELECT source, COUNT(*)::int AS nodes
+           FROM nodes WHERE source LIKE 'kb:%'
+          GROUP BY source ORDER BY COUNT(*) DESC LIMIT 30`
+      );
+      const total = await client.query(
+        "SELECT COUNT(*)::int AS total FROM nodes WHERE source LIKE 'kb:%'"
+      );
+      sendJson(res, 200, { total: total.rows[0].total, sources: sources.rows });
       return;
     }
 

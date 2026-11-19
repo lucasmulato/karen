@@ -257,6 +257,23 @@ maturity and graph_id.
 
 See `docs/notes-ui-references.md` for the free/MIT projects evaluated.
 
+### Security knowledge base
+
+KAREN can search ~7,500 ingested chunks from OWASP (WSTG, Cheat Sheets, MASVS,
+MASTG), PayloadsAllTheThings, MITRE ATT&CK and CAPEC via the `search_kb` agent
+tool, and look up CVEs on demand with `lookup_cve` (NVD, free). Node properties
+carry license, attribution and the original URL — see
+`docs/security-sources.md`. Re-run with:
+
+```bash
+cd /home/admin/karen/api
+node scripts/ingest-security-kb.mjs
+node scripts/ingest-mitre.mjs
+```
+
+Both are idempotent. KB nodes are excluded from the main graph by default and
+from the ambient chat context; only `search_kb` reads them.
+
 ### Persistent memory (markdown vault)
 
 KAREN keeps durable facts outside the repo at `KAREN_VAULT_DIR`
