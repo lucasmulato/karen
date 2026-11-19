@@ -10,6 +10,7 @@ export interface NoteNode {
   path: string;
   name: string;
   type: string;
+  context: string;
   tags: string[];
   maturity: string;
   graphId: string | null;
@@ -31,6 +32,7 @@ export interface NoteGraph {
     orphan: number;
     mostLinked: { path: string; name: string; count: number }[];
     types: { type: string; count: number }[];
+    contexts: { context: string; count: number }[];
     tags: { tag: string; count: number }[];
   };
 }
@@ -94,7 +96,7 @@ const DEFAULT_TYPE: Record<string, string> = {
 export class NoteLinksService {
   constructor(private readonly vault: VaultFsService) {}
 
-  async graph(type?: string, tag?: string): Promise<NoteGraph> {
+  async graph(type?: string, tag?: string, context?: string): Promise<NoteGraph> {
     const files = (await this.vault.list()).filter((f) => f.endsWith(".md"));
     const bySlug = new Map<string, string>();
     const parsed: {
@@ -104,6 +106,7 @@ export class NoteLinksService {
       tags: string[];
       maturity: string;
       graphId: string | null;
+      context: string;
       links: string[];
       body: string;
     }[] = [];
@@ -124,6 +127,7 @@ export class NoteLinksService {
         tags: parseTags(body, meta),
         maturity: (meta.maturity || "seedling").toLowerCase(),
         graphId: meta.graph_id || null,
+        context: (meta.context || "personal").toLowerCase(),
         links: parseLinks(body),
         body,
       };
@@ -153,12 +157,14 @@ export class NoteLinksService {
       tags: p.tags,
       maturity: p.maturity,
       graphId: p.graphId,
+      context: p.context,
       links: edges.filter((e) => e.source === p.path).map((e) => e.target),
       backlinks: backlinks.get(p.path) ?? [],
     }));
 
     if (type) nodes = nodes.filter((n) => n.type === type.toLowerCase());
     if (tag) nodes = nodes.filter((n) => n.tags.includes(tag.toLowerCase()));
+    if (context) nodes = nodes.filter((n) => n.context === context.toLowerCase());
     const visiblePaths = new Set(nodes.map((n) => n.path));
     const visibleEdges = edges.filter(
       (e) => visiblePaths.has(e.source) && visiblePaths.has(e.target)
@@ -166,8 +172,10 @@ export class NoteLinksService {
 
     const typeCounts = new Map<string, number>();
     const tagCounts = new Map<string, number>();
+    const contextCounts = new Map<string, number>();
     for (const n of nodes) {
       typeCounts.set(n.type, (typeCounts.get(n.type) ?? 0) + 1);
+      contextCounts.set(n.context, (contextCounts.get(n.context) ?? 0) + 1);
       for (const t of n.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
     }
     const mostLinked = [...nodes]
@@ -184,6 +192,9 @@ export class NoteLinksService {
         orphan: nodes.filter((n) => !n.links.length && !n.backlinks.length).length,
         mostLinked,
         types: [...typeCounts].map(([t, count]) => ({ type: t, count })).sort((a, b) => b.count - a.count),
+        contexts: [...contextCounts]
+          .map(([context, count]) => ({ context, count }))
+          .sort((a, b) => b.count - a.count),
         tags: [...tagCounts]
           .map(([tag, count]) => ({ tag, count }))
           .sort((a, b) => b.count - a.count)

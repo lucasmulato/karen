@@ -1,0 +1,54 @@
+{
+  "updated": "2026-11-19",
+  "note": "Static capability profile. Only used to rank public opportunities — never to authorise spending or sign-ups.",
+  "needs": [
+    {
+      "id": "embeddings",
+      "label": "Embeddings semânticos",
+      "weight": 3,
+      "keywords": ["embedding", "bge-m3", "workers ai", "vector", "semantic search"],
+      "current": "keyword/ILIKE (Cloudflare opcional, sem credencial)",
+      "gap": true
+    },
+    {
+      "id": "reasoning",
+      "label": "Raciocínio secundário",
+      "weight": 1,
+      "keywords": ["api credits", "model access", "inference", "grok", "gemini", "claude", "gpt"],
+      "current": "Qwen3-4B local (~5 tok/s)",
+      "gap": false
+    },
+    {
+      "id": "gpu",
+      "label": "GPU temporária",
+      "weight": 0,
+      "keywords": ["gpu", "t4", "kaggle", "colab", "dgx"],
+      "current": "sem GPU — fora de escopo nesta rodada",
+      "gap": false
+    },
+    {
+      "id": "hosting",
+      "label": "Hospedagem",
+      "weight": 0,
+      "keywords": ["vercel", "hosting", "deploy", "domain"],
+      "current": "VPS própria + sslip.io + Vercel hobby",
+      "gap": false
+    },
+    {
+      "id": "security",
+      "label": "Pesquisa em segurança",
+      "weight": 2,
+      "keywords": ["researcher access", "red team", "security", "open source", "codex", "ai for science"],
+      "current": "base local OWASP/MITRE + NVD gratuito",
+      "gap": false
+    }
+  ],
+  "hard_limits": [
+    "no paid services",
+    "no account creation",
+    "no login or email verification",
+    "no CAPTCHA bypass",
+    "no stored keys or tokens",
+    "no provider outside the fixed registry scope"
+  ]
+}

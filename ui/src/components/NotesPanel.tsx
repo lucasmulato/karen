@@ -39,6 +39,7 @@ interface NoteNode {
   path: string;
   name: string;
   type: string;
+  context: string;
   tags: string[];
   maturity: string;
   graphId: string | null;
@@ -54,6 +55,7 @@ interface NoteGraph {
     orphan: number;
     mostLinked: { path: string; name: string; count: number }[];
     types: { type: string; count: number }[];
+    contexts: { context: string; count: number }[];
     tags: { tag: string; count: number }[];
   };
 }
@@ -120,6 +122,8 @@ const NotesPanel: React.FC = () => {
   const [noteGraph, setNoteGraph] = useState<NoteGraph | null>(null);
   const [typeFilter, setTypeFilter] = useState('');
   const [tagFilter, setTagFilter] = useState('');
+  const [contextFilter, setContextFilter] = useState('');
+  const [activeContext, setActiveContext] = useState('personal');
   const [readMode, setReadMode] = useState(false);
   const [backlinks, setBacklinks] = useState<NoteNode[]>([]);
   const [linkPicker, setLinkPicker] = useState<{ prefix: string; typing: boolean } | null>(null);
@@ -137,6 +141,10 @@ const NotesPanel: React.FC = () => {
 
   useEffect(() => {
     loadFiles();
+    fetch(`${API_BASE}/notes/context`)
+      .then((r) => r.json())
+      .then((d) => setActiveContext(d.context ?? 'personal'))
+      .catch(() => setActiveContext('personal'));
   }, [loadFiles]);
 
   const loadGraph = useCallback(async () => {
@@ -144,12 +152,13 @@ const NotesPanel: React.FC = () => {
       const params = new URLSearchParams();
       if (typeFilter) params.set('type', typeFilter);
       if (tagFilter) params.set('tag', tagFilter);
+      if (contextFilter) params.set('context', contextFilter);
       const res = await fetch(`${API_BASE}/notes/graph?${params}`);
       setNoteGraph(await res.json());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [typeFilter, tagFilter]);
+  }, [typeFilter, tagFilter, contextFilter]);
 
   useEffect(() => {
     if (tab === 'hub' || tab === 'mapa') loadGraph();
@@ -453,16 +462,39 @@ const NotesPanel: React.FC = () => {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Filtrar por tipo</p>
-                  {(typeFilter || tagFilter) && (
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+                    Contexto ativo: <span className="text-blue-400">{activeContext}</span>
+                  </p>
+                  {(typeFilter || tagFilter || contextFilter) && (
                     <button
-                      onClick={() => { setTypeFilter(''); setTagFilter(''); }}
+                      onClick={() => { setTypeFilter(''); setTagFilter(''); setContextFilter(''); }}
                       className="text-[11px] text-zinc-500 hover:text-blue-400"
                     >
                       Limpar filtros
                     </button>
                   )}
                 </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {noteGraph.stats.contexts?.map((c) => (
+                    <button
+                      key={c.context}
+                      onClick={() => {
+                        const next = c.context === contextFilter ? '' : c.context;
+                        setContextFilter(next);
+                        fetch(`${API_BASE}/notes/context`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ context: next || 'personal' }),
+                        }).then(() => setActiveContext(next || 'personal')).catch(() => {});
+                      }}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] ${contextFilter === c.context ? 'border-blue-500 text-blue-400' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}
+                      title="Trocar contexto de trabalho da KAREN"
+                    >
+                      {c.context} <span className="text-zinc-600">{c.count}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="pt-1 text-[11px] font-bold uppercase tracking-widest text-zinc-500">Filtrar por tipo</p>
                 <div className="flex flex-wrap gap-1.5">
                   {noteGraph.stats.types.map((t) => (
                     <button

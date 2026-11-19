@@ -673,7 +673,29 @@ async function handleHttp(
     if (req.method === "GET" && path === "/api/notes/graph") {
       const type = url.searchParams.get("type") ?? undefined;
       const tag = url.searchParams.get("tag") ?? undefined;
-      sendJson(res, 200, await noteLinks.graph(type, tag));
+      const context = url.searchParams.get("context") ?? undefined;
+      sendJson(res, 200, await noteLinks.graph(type, tag, context));
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/notes/context") {
+      sendJson(res, 200, { context: await notes.activeContext() });
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/notes/context") {
+      const parsed = z
+        .object({ context: z.string().min(1).max(40) })
+        .safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      try {
+        sendJson(res, 200, { context: await notes.setActiveContext(parsed.data.context) });
+      } catch (err: any) {
+        sendJson(res, 400, { error: err.message });
+      }
       return;
     }
 

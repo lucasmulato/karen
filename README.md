@@ -186,10 +186,14 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 - The markdown vault (`KAREN_VAULT_DIR`) is outside the repo; `MEMORY.md` is append-only and cannot be rewritten by the note editor.
 - Outreach is draft-and-copy only — no automated messages, no account creation, no payments.
 
+## Automation (implemented)
+
+- Daily credit/opportunity scan at 09:00 `America/São_Paulo` (`karen-morning.timer`), with a deterministic e-mail digest.
+- Hourly action alerts (`karen-alerts.timer`) for source changes, approaching deadlines and missing critical keys, with a 24h per-topic cooldown. SMTP is required for real delivery; setup steps are recorded in `api/data/email-setup-pending.md`.
+- Working contexts (`context:` frontmatter, `CONTEXT.md`, `set_context` / `get_context`) shared by the Hub, Mapa and the assistant.
+
 ## Roadmap (planned, not implemented)
 
-- Daily credit/opportunity scan with a 09:00 `America/São_Paulo` digest by e-mail.
-- Contexts for college and each business (`context:` frontmatter + `set_context`).
 - **EVA** — a co-founder mode with decision logging and opportunity ranking.
 - Nightly backups (Postgres dump + vault rsync) and dependency audits.
 

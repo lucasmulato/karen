@@ -58,7 +58,7 @@ export class VaultFsService {
       throw new Error("Somente arquivos .md são permitidos.");
     }
     const top = clean.split("/")[0];
-    if (!ALLOWED_DIRS.has(top) && clean !== "MEMORY.md") {
+    if (!ALLOWED_DIRS.has(top) && clean !== "MEMORY.md" && clean !== "CONTEXT.md") {
       throw new Error(`Diretório não permitido: ${top}`);
     }
     const full = resolve(join(this.root, clean));
@@ -74,6 +74,10 @@ export class VaultFsService {
       await mkdir(join(this.root, dir), { recursive: true });
     }
     await this.writeIfMissing("MEMORY.md", MEMORY_SEED);
+    await this.writeIfMissing(
+      "CONTEXT.md",
+      "# CONTEXT.md — contexto ativo da KAREN\n\nactive_context: personal\n"
+    );
   }
 
   private async writeIfMissing(relative: string, content: string): Promise<void> {
@@ -146,6 +150,30 @@ export class VaultFsService {
       text = lines.join("\n");
     }
     await writeFile(this.safe("MEMORY.md"), text, "utf8");
+  }
+
+  /** Currently active working context (college, a business, personal…). */
+  async activeContext(): Promise<string> {
+    try {
+      const text = await this.read("CONTEXT.md");
+      const line = text
+        .split("\n")
+        .find((l) => /^active_context:/i.test(l.trim()));
+      return line?.replace(/^active_context:\s*/i, "").trim() || "personal";
+    } catch {
+      return "personal";
+    }
+  }
+
+  async setActiveContext(name: string): Promise<string> {
+    const clean = name.trim().replace(/[^\w-]/g, "").slice(0, 40);
+    if (!clean) throw new Error("Contexto inválido.");
+    const body = await this.read("CONTEXT.md").catch(() => "");
+    const heading = "# CONTEXT.md — contexto ativo da KAREN\n\n";
+    const rest = body.replace(heading, "").replace(/^active_context:.*\n?/im, "").trim();
+    const next = `${heading}active_context: ${clean}\n${rest ? `\n${rest}\n` : ""}`;
+    await writeFile(this.safe("CONTEXT.md"), next, "utf8");
+    return clean;
   }
 
   /** Short memory block injected into the agent's context. */

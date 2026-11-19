@@ -303,6 +303,47 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_context",
+      description: "Retorna o contexto de trabalho ativo (personal, college, nome de um negócio).",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_context",
+      description:
+        "Muda o contexto de trabalho ativo quando o usuário disser que está trabalhando na faculdade ou em um negócio específico.",
+      parameters: {
+        type: "object",
+        properties: {
+          context: { type: "string", description: "Ex: personal, college, negocio-a" },
+        },
+        required: ["context"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "check_credits",
+      description:
+        "Resume o relatório diário de créditos: prioridades, mudanças e prazos. Não cria conta nem gasta nada.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "key_status",
+      description:
+        "Informa quais chaves de API conhecidas estão configuradas (configured/missing). NUNCA retorna valores.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 ];
 
 export interface ChatResult {
@@ -323,7 +364,9 @@ export class GraphAgent {
   async chat(message: string): Promise<ChatResult> {
     const context = await this.vault.contextForQuestion(message);
     const memory = this.notes ? await this.notes.memory() : "";
+    const activeContext = this.notes ? await this.notes.activeContext() : "personal";
     const environment = [
+      `CONTEXTO ATIVO DE TRABALHO: ${activeContext}. Adapte prioridades e vocabulário a ele.`,
       "AMBIENTE — SynapseVault, seu second brain de segurança.",
       memory
         ? `MEMÓRIA PERSISTENTE (MEMORY.md). Use como fonte e atualize com read_note/write_note quando aprender algo durável:\n${memory}`
@@ -551,6 +594,68 @@ export class GraphAgent {
           reference: `https://nvd.nist.gov/vuln/detail/${item.id}`,
           attribution: "Source: NVD / NIST (public domain)",
         });
+      }
+      case "get_context": {
+        if (!this.notes) return "personal";
+        return await this.notes.activeContext();
+      }
+      case "set_context": {
+        if (!this.notes) throw new Error("Vault de notas não disponível.");
+        const context = await this.notes.setActiveContext(String(args.context ?? ""));
+        return JSON.stringify({ context });
+      }
+      case "check_credits": {
+        const path =
+          process.env.KAREN_CREDIT_JSON ??
+          "/home/admin/karen/api/data/credit-recommendations.json";
+        let text: string;
+        try {
+          const data = JSON.parse(readFileSync(path, "utf8"));
+          const top = (data.priorities ?? []).slice(0, 5);
+          text = [
+            `Relatório: ${data.generated_at ?? data.date ?? "—"}`,
+            `Prioridades: ${(data.priorities ?? []).length} · mudanças: ${(data.changes ?? []).length}`,
+            ...top.map((p: any, i: number) => `${i + 1}. ${p.title} (score ${p.score})`),
+            "Ação humana necessária: confirmar cada oferta no canal oficial.",
+          ].join("\n");
+        } catch {
+          return "Relatório de créditos ainda não foi gerado. Rode o scan diário.";
+        }
+        try {
+          const pending = readFileSync(
+            "/home/admin/karen/api/data/email-setup-pending.md",
+            "utf8"
+          );
+          return `${text}\n\nPENDÊNCIA DE E-MAIL:\n${pending.slice(0, 600)}`;
+        } catch {
+          return text;
+        }
+      }
+      case "key_status": {
+        const names = [
+          "LLM_API_KEY",
+          "APIFY_TOKEN",
+          "CLOUDFLARE_API_TOKEN",
+          "KAREN_API_KEY",
+          "NVD_API_KEY",
+          "GITHUB_TOKEN",
+          "SMTP_USER",
+          "SMTP_APP_PASSWORD",
+        ];
+        let file = "";
+        try {
+          file = readFileSync(
+            process.env.KAREN_ENV_FILE ?? "/home/admin/models/karen.env",
+            "utf8"
+          );
+        } catch { /* ignore */ }
+        return JSON.stringify(
+          names.map((name) => {
+            const inEnv = Boolean(process.env[name]?.trim());
+            const inFile = new RegExp(`^${name}=(.+)$`, "m").test(file);
+            return { name, status: inEnv || inFile ? "configured" : "missing" };
+          })
+        );
       }
       default:
         throw new Error(`Unknown tool: ${call.function.name}`);
