@@ -36,6 +36,30 @@ cat data/restore-drill.json
 The drill never touches production. To do a real restore, stop the API, replace
 the database from the chosen dump, then restart and check `/api/health/full`.
 
+## Offsite backup
+
+Encrypted copies of the newest dump + vault archive are pushed daily (04:00) to
+a **private** git repo `karen-backups` via SSH. The timer is
+`karen-offsite.timer`; run manually with
+`sudo systemctl start karen-offsite.service`.
+
+The AES-256 passphrase is `KAREN_BACKUP_PASSPHRASE` in the env file **and must be
+saved in your password manager**. Without it the offsite copies cannot be
+restored. To restore one:
+
+```bash
+openssl enc -d -aes-256-cbc -pbkdf2 -in <file>.enc -out <file>
+```
+
+The offsite repo must exist and be private before enabling the timer:
+
+```bash
+git ls-remote git@github.com:lucasmulato/karen-backups.git HEAD
+```
+
+Monthly OS update checks use `karen-osupdates.timer` and only raise an e-mail
+action item — they never upgrade automatically.
+
 ## Rotate a secret
 
 1. Generate the new value at the provider.

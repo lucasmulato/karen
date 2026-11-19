@@ -193,6 +193,8 @@ Mutating routes are rate limited (60 req/min/IP) and validated with zod.
 
 - Nightly backups at 03:00 `America/São_Paulo` (`karen-backup.timer`): PostgreSQL dump + vault archive, 7-day retention, stored outside the repo. Verify with `node api/scripts/restore-drill.mjs`.
 - Watchdog (`karen-watchdog.timer`, hourly): failed units, stale backups, disk, cert expiry and model health become e-mail action items.
+- Monthly OS update check (`karen-osupdates.timer`) raises an e-mail item instead of upgrading automatically.
+- Optional offsite backup (`karen-offsite.timer`, 04:00): AES-256 encrypted copies pushed to a private git repo (see `docs/OPERATIONS.md`).
 - Weekly dependency audit (`karen-audit.timer`, Monday 08:30 `America/São_Paulo`): writes `api/data/dependency-audit.json` and raises an e-mail action item when high/critical advisories exist. Never auto-upgrades packages.
 - Daily credit/opportunity scan at 09:00 `America/São_Paulo` (`karen-morning.timer`), with a deterministic e-mail digest.
 - Hourly action alerts (`karen-alerts.timer`) for source changes, approaching deadlines and missing critical keys, with a 24h per-topic cooldown. SMTP is required for real delivery; setup steps are recorded in `api/data/email-setup-pending.md`.
