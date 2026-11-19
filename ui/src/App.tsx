@@ -67,6 +67,13 @@ const App: React.FC = () => {
   const [showChat, setShowChat] = useState(false);
   const [showLeads, setShowLeads] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
+  const [paneWidth, setPaneWidth] = useState<number>(() => {
+    const saved = Number(localStorage.getItem('karen-pane-width'));
+    return Number.isFinite(saved) && saved >= 25 && saved <= 75 ? saved : 50;
+  });
+  const paneWidthRef = useRef(paneWidth);
+  const mainRef = useRef<HTMLElement>(null);
+  const draggingRef = useRef(false);
 
   // Positions changed since last save (id -> x/y), flushed on a debounce.
   const pendingPositions = useRef<Map<string, NodePosition>>(new Map());
@@ -121,6 +128,43 @@ const App: React.FC = () => {
     } finally {
       e.target.value = '';
     }
+  }
+
+  function setWidth(pct: number) {
+    const clamped = Math.min(75, Math.max(25, Math.round(pct)));
+    paneWidthRef.current = clamped;
+    setPaneWidth(clamped);
+  }
+
+  function onDividerDown(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    draggingRef.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+  }
+
+  function onDividerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!draggingRef.current || !mainRef.current) return;
+    const rect = mainRef.current.getBoundingClientRect();
+    setWidth(((rect.right - e.clientX) / rect.width) * 100);
+  }
+
+  function onDividerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+    localStorage.setItem('karen-pane-width', String(paneWidthRef.current));
+  }
+
+  function onDividerKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const next = paneWidthRef.current + (e.key === 'ArrowLeft' ? 2 : -2);
+    setWidth(next);
+    localStorage.setItem('karen-pane-width', String(paneWidthRef.current));
   }
 
   function handleAddNode(e: React.FormEvent) {
@@ -321,7 +365,11 @@ const App: React.FC = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 flex min-w-0 h-full">
+      <main
+        ref={mainRef}
+        className="flex-1 flex min-w-0 h-full"
+        style={{ '--chat-width': `${paneWidth}%` } as React.CSSProperties}
+      >
         <div className="relative flex-1 min-w-0 h-full">
         <header className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center pointer-events-none z-10">
           <div className="pointer-events-auto flex items-center gap-3 bg-black/50 backdrop-blur-md px-4 py-2 rounded-full border border-zinc-800 shadow-xl">
@@ -453,8 +501,28 @@ const App: React.FC = () => {
         />
         </div>
 
+        {(showChat || showCommands) && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-valuenow={paneWidth}
+            aria-label="Redimensionar painel"
+            tabIndex={0}
+            title="Arraste para redimensionar · duplo clique restaura 50% · setas ajustam"
+            className="hidden md:block w-1.5 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-600 focus:bg-blue-500 focus:outline-none transition-colors"
+            onPointerDown={onDividerDown}
+            onPointerMove={onDividerMove}
+            onPointerUp={onDividerUp}
+            onDoubleClick={() => {
+              setWidth(50);
+              localStorage.setItem('karen-pane-width', '50');
+            }}
+            onKeyDown={onDividerKeyDown}
+          />
+        )}
+
         {showChat && (
-          <aside className="w-full md:w-1/2 h-full shrink-0 border-l border-zinc-800 bg-black">
+          <aside className="w-full md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 md:border-l-0 bg-black">
             <ChatPanel
               onClose={() => setShowChat(false)}
               onGraphChanged={refresh}
@@ -463,7 +531,7 @@ const App: React.FC = () => {
         )}
 
         {showCommands && (
-          <aside className="w-full md:w-1/2 h-full shrink-0 border-l border-zinc-800 bg-black">
+          <aside className="w-full md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 md:border-l-0 bg-black">
             <CommandPanel onClose={() => setShowCommands(false)} />
           </aside>
         )}
