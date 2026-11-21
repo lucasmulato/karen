@@ -8,6 +8,7 @@ import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import nodemailer from "nodemailer";
 import { Client } from "pg";
+import { pendingApprovals } from "./lib/pending-approvals.mjs";
 
 const DATA = "/home/admin/karen/api/data";
 const VAULT = process.env.KAREN_VAULT_DIR || "/home/admin/models/karen-vault";
@@ -51,6 +52,7 @@ async function main() {
     readJson("os-updates.json"),
   ]);
   const garden = await gardenStats();
+  const approvals = await pendingApprovals();
   const decisions = (await readdir(`${VAULT}/decisions`).catch(() => []))
     .filter((f) => f.endsWith(".md"))
     .sort()
@@ -64,7 +66,7 @@ async function main() {
 
   const html = [
     `<h2>EVA — revisão semanal</h2>`,
-    `<p><b>Contexto:</b> ${esc(credits?.generated_at ?? date)} · decisões recentes: ${decisions.length} · ações abertas: ${open.length}</p>`,
+    `<p><b>Contexto:</b> ${esc(credits?.generated_at ?? date)} · decisões recentes: ${decisions.length} · ações abertas: ${open.length} · aprovações: ${approvals}</p>`,
     `<h3>Decisões da semana</h3>`,
     ...(top.length
       ? top.map((p, i) => [
@@ -80,6 +82,7 @@ async function main() {
     `<li>Dependências: ${audit?.totals?.critical ?? 0} critical / ${audit?.totals?.high ?? 0} high</li>`,
     `<li>Atualizações do sistema: ${osUpdates?.count ?? 0}</li>`,
     `<li>Ações abertas: ${open.length}</li>`,
+    `<li>Aprovações pendentes: ${approvals} — /app/?pane=commands</li>`,
     `</ul>`,
     `<h3>Decisões registradas</h3>`,
     `<ul>${decisions.map((d) => `<li>${esc(d)}</li>`).join("") || "<li>nenhuma</li>"}</ul>`,

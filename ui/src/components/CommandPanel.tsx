@@ -83,14 +83,13 @@ const CommandPanel: React.FC = () => {
   }
 
   async function decide(run: Run, action: 'approve' | 'deny') {
-    if (!run.approval_token) return;
     setBusy(run.id);
     setError('');
     try {
       const res = await fetch(`${API_BASE}/commands/${run.id}/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: run.approval_token }),
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);

@@ -8,6 +8,7 @@
 import { readFile, writeFile, mkdir, access } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import nodemailer from "nodemailer";
+import { pendingApprovals } from "./lib/pending-approvals.mjs";
 
 const REPORT = resolve(
   process.env.KAREN_CREDIT_JSON || "/home/admin/karen/api/data/credit-recommendations.json"
@@ -69,6 +70,15 @@ async function main() {
         `Reiniciar os serviços: sudo systemctl restart karen-api karen-morning.service`,
       ],
       severity: "info",
+    });
+  }
+  const approvals = await pendingApprovals();
+  if (approvals > 0) {
+    items.push({
+      topic: "pending-approvals",
+      title: `${approvals} comando(s) aguardando aprovação`,
+      steps: ["Abrir /app/?pane=commands", "Revisar o preview e aprovar ou negar."],
+      severity: "urgent",
     });
   }
   try {

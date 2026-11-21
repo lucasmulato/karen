@@ -90,3 +90,25 @@ test("dashboard activity mixes sources", async () => {
   assert.ok(items.some((i) => i.kind === "command"));
   assert.ok(items.some((i) => i.kind === "decision"));
 });
+
+test('unified queue surfaces pending approvals without tokens', async () => {
+  const { QueueService } = await import('../build/services/queue.js');
+  const client = {
+    query: async () => ({
+      rows: [{
+        id: '11111111-1111-1111-1111-111111111111',
+        command_id: 'reload_web',
+        risk: 'write',
+        source: 'ui',
+        created_at: '2026-11-21T12:00:00Z',
+      }],
+    }),
+  };
+  const queue = await new QueueService(client).attention();
+  const cmd = queue.items.find((i) => i.source === 'command');
+  assert.ok(cmd);
+  assert.equal(cmd.severity, 'critical');
+  assert.equal(cmd.policy, 'propose');
+  assert.equal(cmd.route, '/app/?pane=commands');
+  assert.ok(!JSON.stringify(queue).includes('approval_token'));
+});

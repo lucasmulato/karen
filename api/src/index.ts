@@ -21,6 +21,7 @@ import { GardenService } from "./services/garden.js";
 import { NoteLinksService } from "./services/notelinks.js";
 import { NoteGraphBridge } from "./services/notebridge.js";
 import { DashboardService } from "./services/dashboard.js";
+import { QueueService } from "./services/queue.js";
 import { PortalService } from "./services/portal.js";
 import { AuthService } from "./services/auth.js";
 
@@ -55,6 +56,7 @@ const garden = new GardenService(client);
 const noteLinks = new NoteLinksService(notes);
 const noteBridge = new NoteGraphBridge(client, notes, noteLinks);
 const dashboard = new DashboardService(client, notes);
+const queue = new QueueService(client);
 const portal = new PortalService(notes);
 const auth = new AuthService();
 
@@ -307,7 +309,7 @@ const commandRequestSchema = z.object({
 });
 
 const approvalSchema = z.object({
-  token: z.string().min(10).max(200),
+  token: z.string().min(10).max(200).optional(),
 });
 
 const noteWriteSchema = z.object({
@@ -797,6 +799,11 @@ async function handleHttp(
 
     if (req.method === "GET" && path === "/api/dashboard/attention") {
       sendJson(res, 200, await dashboard.attention());
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/dashboard/queue") {
+      sendJson(res, 200, await queue.attention());
       return;
     }
 

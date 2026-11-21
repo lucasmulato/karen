@@ -16,6 +16,18 @@ Public landing: `/`. Login page: `/login.html`. Protected app: `/app/`.
 - Failed logins are logged to `api/data/auth-failures.json`; the watchdog raises an e-mail action item after 3 in 24h.
 - Google OAuth can be added later behind the same auth layer.
 
+## Approval / attention queue
+
+`GET /api/dashboard/queue` merges pending command approvals, action items,
+missing keys, dependency advisories and credit changes. Items carry `source`,
+`severity`, `policy` (`auto` / `propose` / `blocked`), and a `route`. Tokens are
+never included. Digests and urgent alerts point to `/app/?pane=commands`, which
+opens the approval panel directly.
+
+Approval of a pending command is authenticated by the session cookie; the old
+token parameter is still accepted for backwards compatibility. Comparison uses
+the stored SHA-256 hash, and new runs no longer persist the plaintext token.
+
 ## Verify the system
 
 ```bash

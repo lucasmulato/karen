@@ -119,6 +119,17 @@ const App: React.FC = () => {
   }, [refresh]);
 
   useEffect(() => {
+    // Digest/alert links open the approval queue directly. Never carries a token.
+    const pane = new URLSearchParams(window.location.search).get('pane');
+    if (pane === 'commands') {
+      setShowCommands(true);
+      setShowChat(false);
+      setShowLeads(false);
+      setShowEva(false);
+    }
+  }, []);
+
+  useEffect(() => {
     fetch(`${API_BASE}/eva/mode`)
       .then((r) => r.json())
       .then((d) => setMode(d.mode ?? 'karen'))

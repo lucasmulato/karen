@@ -285,7 +285,7 @@ export class CommandService {
     const token = isRead ? null : randomBytes(24).toString("hex");
     const inserted = await this.client.query(
       `INSERT INTO command_runs (command_id, args, risk, decision, status, source, approval_token_hash, approval_token)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,NULL) RETURNING id`,
       [
         commandId,
         JSON.stringify(args),
@@ -294,7 +294,6 @@ export class CommandService {
         isRead ? "running" : "pending",
         source,
         token ? hashToken(token) : null,
-        token,
       ]
     );
     const runId = inserted.rows[0].id as string;
@@ -310,12 +309,20 @@ export class CommandService {
     return this.execute(def, runId);
   }
 
-  async approve(runId: string, token: string): Promise<CommandResult> {
+  async approve(runId: string, token?: string): Promise<CommandResult> {
     const run = await this.pending(runId);
-    if (!run || !run.approval_token || run.approval_token !== token) {
+    // Approval is session-gated at the proxy; token is optional backwards
+    // compatibility. When present, verify against the stored hash.
+    const valid = Boolean(
+      run &&
+        (!token ||
+          (run.approval_token_hash && run.approval_token_hash === hashToken(token)) ||
+          (run.approval_token && run.approval_token === token))
+    );
+    if (!valid) {
       return { status: "unauthorized", error: "Aprovação inválida ou expirada." };
     }
-    const def = this.find(run.command_id);
+    const def = this.find(run!.command_id);
     if (!def) return { status: "not_found", error: "Comando desconhecido." };
     await this.client.query(
       `UPDATE command_runs SET decision = 'approved', status = 'running', approval_token_hash = NULL, approval_token = NULL WHERE id = $1::uuid`,
@@ -324,9 +331,15 @@ export class CommandService {
     return this.execute(def, runId);
   }
 
-  async deny(runId: string, token: string): Promise<CommandResult> {
+  async deny(runId: string, token?: string): Promise<CommandResult> {
     const run = await this.pending(runId);
-    if (!run || !run.approval_token || run.approval_token !== token) {
+    const valid = Boolean(
+      run &&
+        (!token ||
+          (run.approval_token_hash && run.approval_token_hash === hashToken(token)) ||
+          (run.approval_token && run.approval_token === token))
+    );
+    if (!valid) {
       return { status: "unauthorized", error: "Aprovação inválida ou expirada." };
     }
     await this.client.query(

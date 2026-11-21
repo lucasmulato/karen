@@ -9,6 +9,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import nodemailer from "nodemailer";
 import { Client } from "pg";
+import { pendingApprovals } from "./lib/pending-approvals.mjs";
 
 const OUTPUT = resolve(
   process.env.KAREN_CREDIT_JSON || "/home/admin/karen/api/data/credit-recommendations.json"
@@ -82,9 +83,10 @@ async function main() {
   const changes = report.changes?.length ?? 0;
   const pending = await pendingItems();
   const optionalMissing = await missingOptionalKeys();
+  const approvals = await pendingApprovals();
   const subject = EVENING
-    ? `KAREN · noite · ${report.date} · ${top.length} prioridades, ${changes} mudanças`
-    : `KAREN · ${report.date} · ${top.length} prioridades, ${changes} mudanças`;
+    ? `KAREN · noite · ${report.date} · ${approvals} aprovações, ${top.length} prioridades`
+    : `KAREN · ${report.date} · ${approvals} aprovações, ${top.length} prioridades`;
   const sections = [
     `<h2>Créditos e prazos</h2>`,
     top.length
@@ -102,6 +104,10 @@ async function main() {
     `<p>${stats.notes} notas no grafo · ${stats.orphans} órfãs · ${stats.stale} paradas há 30+ dias.</p>`,
     `<h2>Uma sugestão</h2>`,
     `<p>${top[0] ? `Avaliar primeiro: ${escapeHtml(top[0].title)}.` : "Nenhuma ação prioritária — dia calmo."}</p>`,
+    `<h2>Aprovações pendentes</h2>`,
+    approvals
+      ? `<p><b>${approvals}</b> comando(s) aguardando sua decisão. Abrir: /app/?pane=commands</p>`
+      : `<p>Nenhuma aprovação pendente.</p>`,
     `<h2>Pendências</h2>`,
     pending.length
       ? `<ul>${pending.map((p) => `<li><b>${escapeHtml(p.title)}</b>${p.steps?.length ? `<ul>${p.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>` : ""}</li>`).join("")}</ul>`
