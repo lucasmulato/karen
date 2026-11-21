@@ -59,7 +59,7 @@ const CommandPalette: React.FC<Props> = ({ open, onClose, actions }) => {
         role="dialog"
         aria-modal="true"
         aria-label="Paleta de comandos"
-        className="w-full max-w-xl overflow-hidden rounded-xl border border-cyan-900/60 bg-[#070b12] shadow-[0_0_60px_rgba(34,211,238,.12)]"
+        className="w-full max-w-xl overflow-hidden rounded-xl border border-hud-cyan/30 bg-hud-panel shadow-[0_0_60px_rgba(34,211,238,.12)]"
       >
         <div className="flex items-center gap-3 border-b border-cyan-950 px-4 py-3">
           <Search size={16} className="text-cyan-500" />
@@ -85,7 +85,7 @@ const CommandPalette: React.FC<Props> = ({ open, onClose, actions }) => {
                 onMouseEnter={() => setActive(index)}
                 onClick={() => void choose(action)}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
-                  index === active ? 'bg-cyan-950/50 text-cyan-200' : 'text-zinc-300 hover:bg-zinc-900'
+                  index === active ? 'bg-hud-cyan/10 text-hud-cyan' : 'text-zinc-300 hover:bg-zinc-900'
                 }`}
               >
                 <Icon size={15} className="shrink-0 text-cyan-600" />
