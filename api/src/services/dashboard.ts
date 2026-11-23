@@ -10,6 +10,7 @@ const ENV_FILE = process.env.KAREN_ENV_FILE ?? "/home/admin/models/karen.env";
 const CREDITS = process.env.KAREN_CREDIT_JSON ?? "/home/admin/karen/api/data/credit-recommendations.json";
 const ACTIONS = "/home/admin/karen/api/data/action-items.json";
 const AUDIT = "/home/admin/karen/api/data/dependency-audit.json";
+const TRIAGE = process.env.KAREN_TRIAGE_JSON ?? "/home/admin/karen/api/data/eva-triage.json";
 
 const KEY_LABELS: Record<string, string> = {
   CLOUDFLARE_API_TOKEN: "Embeddings semânticos",
@@ -42,8 +43,17 @@ export interface ActivityItem {
 export class DashboardService {
   constructor(private readonly client: Client, private readonly notes: VaultFsService) {}
 
-  async attention(): Promise<{ total: number; items: AttentionItem[] }> {
+  async attention(): Promise<{
+    total: number;
+    items: AttentionItem[];
+    triage?: { generated_at: string; handled: number; needs_you: number; blocked: number };
+  }> {
     const items: AttentionItem[] = [];
+    const triageFile = await readJson(TRIAGE);
+    const triageItems = Array.isArray(triageFile?.items) ? triageFile.items : [];
+    const auto = new Set(
+      triageItems.filter((t: any) => t?.policy === "auto").map((t: any) => String(t.id))
+    );
     let envText = "";
     try { envText = await readFile(ENV_FILE, "utf8"); } catch { /* ignore */ }
     for (const [name, label] of Object.entries(KEY_LABELS)) {
@@ -75,7 +85,19 @@ export class DashboardService {
         detail: `${credits.changes.length} mudança(ões) em fontes oficiais`,
       });
     }
-    return { total: items.length, items };
+    // Items EVA classified as reversible/read are handled, not attention.
+    const visible = items.filter(
+      (item) => !auto.has(item.topic) && !auto.has(`action:${item.topic}`)
+    );
+    const triage = triageFile?.generated_at
+      ? {
+          generated_at: String(triageFile.generated_at),
+          handled: triageItems.filter((t: any) => t?.policy === "auto").length,
+          needs_you: triageItems.filter((t: any) => t?.policy === "propose").length,
+          blocked: triageItems.filter((t: any) => t?.policy === "blocked").length,
+        }
+      : undefined;
+    return { total: visible.length, items: visible, triage };
   }
 
   async activity(): Promise<ActivityItem[]> {

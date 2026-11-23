@@ -22,6 +22,7 @@ const EVENING = process.argv.includes("--evening");
 const ACTIONS = resolve("/home/admin/karen/api/data/action-items.json");
 const ENV_FILE = resolve(process.env.KAREN_ENV_FILE || "/home/admin/models/karen.env");
 const OPTIONAL_KEYS = ["APIFY_TOKEN", "CLOUDFLARE_API_TOKEN"];
+const TRIAGE = resolve(process.env.KAREN_TRIAGE_JSON || "/home/admin/karen/api/data/eva-triage.json");
 
 function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (c) =>
@@ -62,6 +63,13 @@ async function pendingItems() {
   } catch { return []; }
 }
 
+async function triageSummary() {
+  try {
+    const data = JSON.parse(await readFile(TRIAGE, "utf8"));
+    return data?.summary ?? null;
+  } catch { return null; }
+}
+
 async function missingOptionalKeys() {
   let envText = "";
   try { envText = await readFile(ENV_FILE, "utf8"); } catch { /* ignore */ }
@@ -84,6 +92,7 @@ async function main() {
   const pending = await pendingItems();
   const optionalMissing = await missingOptionalKeys();
   const approvals = await pendingApprovals();
+  const triage = await triageSummary();
   const subject = EVENING
     ? `KAREN · noite · ${report.date} · ${approvals} aprovações, ${top.length} prioridades`
     : `KAREN · ${report.date} · ${approvals} aprovações, ${top.length} prioridades`;
@@ -108,6 +117,14 @@ async function main() {
     approvals
       ? `<p><b>${approvals}</b> comando(s) aguardando sua decisão. Abrir: /app/?pane=commands</p>`
       : `<p>Nenhuma aprovação pendente.</p>`,
+    ...(triage
+      ? [
+          `<h2>EVA · triagem noturna</h2>`,
+          `<p>${triage.total} item(ns) triados: <b>${triage.auto}</b> resolvidos automaticamente, ` +
+            `<b>${triage.propose}</b> precisam da sua decisão, <b>${triage.blocked}</b> bloqueados por regra de segurança. ` +
+            `A triagem nunca executa ações — itens "auto" são apenas leitura/reversíveis.</p>`,
+        ]
+      : []),
     `<h2>Pendências</h2>`,
     pending.length
       ? `<ul>${pending.map((p) => `<li><b>${escapeHtml(p.title)}</b>${p.steps?.length ? `<ul>${p.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>` : ""}</li>`).join("")}</ul>`

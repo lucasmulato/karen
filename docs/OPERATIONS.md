@@ -28,12 +28,40 @@ Approval of a pending command is authenticated by the session cookie; the old
 token parameter is still accepted for backwards compatibility. Comparison uses
 the stored SHA-256 hash, and new runs no longer persist the plaintext token.
 
+### EVA nightly triage
+
+`api/scripts/eva-nightly-triage.mjs` collects pending command approvals, action
+items and notes newer than 48h in `00 Inbox`, then makes **one batched call** to
+the local llama model with the EVA persona. It writes a read-only side file,
+`api/data/eva-triage.json`, with `auto` / `propose` / `blocked` per item.
+
+The model only classifies — it never executes anything. Deterministic rules in
+`api/scripts/lib/eva-triage.mjs` override it: a pending command approval is
+never `auto`, `write` commands are `blocked`, and anything involving money,
+accounts, logins, messages or secret values is `blocked`. Titles/details are
+sanitized before they reach the prompt or the output file.
+
+The queue overlays those policies onto its items; `GET /api/dashboard/attention`
+hides `auto` items (and reports the triage counts), so the badge reflects only
+what still needs you. The morning/evening digest shows a triagem summary.
+
+Manual runs from `api/`:
+
+```bash
+node scripts/eva-nightly-triage.mjs --offline   # deterministic only, no LLM, prints JSON
+node scripts/eva-nightly-triage.mjs --dry-run   # calls the LLM, prints JSON, does not write
+node scripts/eva-nightly-triage.mjs             # calls the LLM and writes the side file
+```
+
+If the LLM is unavailable the script still writes a valid file (all items fall
+back to `propose`, with `llm_error` recorded) — the queue never breaks.
+
 ## Verify the system
 
 ```bash
 sudo systemctl status karen-llama karen-api
 sudo systemctl list-timers karen-morning.timer karen-evening.timer \
-  karen-backup.timer karen-audit.timer karen-watchdog.timer
+  karen-backup.timer karen-audit.timer karen-watchdog.timer karen-eva-triage.timer
 curl -s http://127.0.0.1:3000/api/health/full
 ```
 
@@ -47,6 +75,7 @@ curl -s http://127.0.0.1:3000/api/health/full
 | `karen-backup` | daily 03:00 | Postgres dump + vault tar, 7-day retention |
 | `karen-audit` | Monday 08:30 | npm audit report |
 | `karen-eva-weekly` | Monday 10:00 | EVA strategy-review e-mail |
+| `karen-eva-triage` | daily 23:30 | EVA classifies queue items (`auto` / `propose` / `blocked`) |
 
 Run one manually: `sudo systemctl start <name>.service`. Logs:
 `journalctl -u <name>.service -n 50`.

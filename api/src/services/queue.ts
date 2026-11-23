@@ -12,6 +12,7 @@ const ENV_FILE = process.env.KAREN_ENV_FILE ?? "/home/admin/models/karen.env";
 const ACTIONS = process.env.KAREN_ACTION_ITEMS ?? "/home/admin/karen/api/data/action-items.json";
 const AUDIT = process.env.KAREN_AUDIT_JSON ?? "/home/admin/karen/api/data/dependency-audit.json";
 const CREDITS = process.env.KAREN_CREDIT_JSON ?? "/home/admin/karen/api/data/credit-recommendations.json";
+const TRIAGE = process.env.KAREN_TRIAGE_JSON ?? "/home/admin/karen/api/data/eva-triage.json";
 
 const KEY_LABELS: Record<string, string> = {
   CLOUDFLARE_API_TOKEN: "Embeddings semânticos",
@@ -26,7 +27,7 @@ export type Policy = "auto" | "propose" | "blocked";
 
 export interface QueueItem {
   id: string;
-  source: "command" | "action" | "key" | "audit" | "credit";
+  source: "command" | "action" | "key" | "audit" | "credit" | "triage";
   severity: Severity;
   policy: Policy;
   title: string;
@@ -133,6 +134,40 @@ export class QueueService {
         detail: "Confirmar em canal oficial antes de qualquer inscrição.",
         dedupe_key: `credit:${credits.date ?? "latest"}`,
       });
+    }
+
+    // 6. EVA nightly triage — a read-only side file that overlays policies onto
+    //    existing items and adds note-only items. Deterministic rules in the
+    //    triage script guarantee no command approval is ever downgraded to auto.
+    const triage = await readJson(TRIAGE);
+    if (Array.isArray(triage?.items)) {
+      const byId = new Map<string, any>();
+      for (const item of triage.items) {
+        if (item && typeof item.id === "string") byId.set(item.id, item);
+      }
+      for (const item of out) {
+        const classified = byId.get(item.id);
+        if (!classified || !["auto", "propose", "blocked"].includes(classified.policy)) continue;
+        byId.delete(item.id);
+        if (item.source === "command" && classified.policy === "auto") continue;
+        item.policy = classified.policy as Policy;
+        const reason = String(classified.reason ?? "").trim();
+        if (reason) item.detail = `${item.detail ? `${item.detail} · ` : ""}EVA: ${reason}`;
+        if (item.policy === "blocked") item.severity = "critical";
+        else if (item.policy === "auto" && item.severity !== "critical") item.severity = "low";
+      }
+      for (const [id, classified] of byId) {
+        out.push({
+          id: `triage:${id}`,
+          source: "triage",
+          severity: classified.policy === "blocked" ? "critical" : classified.policy === "auto" ? "low" : "medium",
+          policy: classified.policy as Policy,
+          title: String(classified.title ?? "Item triado por EVA"),
+          detail: `EVA: ${String(classified.reason ?? "")}`,
+          route: classified.route,
+          dedupe_key: `triage:${id}`,
+        });
+      }
     }
 
     const seen = new Set<string>();

@@ -6,6 +6,13 @@ import { COMMANDS } from "../build/services/commands.js";
 import { draftFor } from "../build/templates/outreach.js";
 import { CanvasService } from "../build/services/canvas.js";
 import { DashboardService } from "../build/services/dashboard.js";
+import {
+  hardPolicy,
+  parseModelOutput,
+  mergeClassifications,
+  sanitizeText,
+  summarize,
+} from "../scripts/lib/eva-triage.mjs";
 
 test("frontmatter and wikilinks parse correctly", () => {
   const meta = parseFrontmatter(
@@ -111,4 +118,48 @@ test('unified queue surfaces pending approvals without tokens', async () => {
   assert.equal(cmd.policy, 'propose');
   assert.equal(cmd.route, '/app/?pane=commands');
   assert.ok(!JSON.stringify(queue).includes('approval_token'));
+});
+
+test('EVA triage guardrails force high-risk items to a human gate', () => {
+  assert.equal(hardPolicy({ source: 'command', risk: 'write', title: 'x' }), 'blocked');
+  assert.equal(hardPolicy({ source: 'command', risk: 'read', title: 'x' }), 'propose');
+  assert.equal(hardPolicy({ source: 'action', title: 'Pagar fatura' }), 'blocked');
+  assert.equal(hardPolicy({ source: 'key', title: 'Chave opcional', detail: 'APIFY_TOKEN' }), null);
+  assert.equal(hardPolicy({ source: 'audit', title: 'Revisar dependências' }), null);
+  assert.equal(
+    hardPolicy({ source: 'note', detail: 'SMTP_APP_PASSWORD=supersecret123' }),
+    'blocked'
+  );
+});
+
+test('EVA triage sanitizes secrets and parses chatty model output', () => {
+  assert.equal(
+    sanitizeText('token=abc123 e Bearer xyz789'),
+    '[redacted] e Bearer [redacted]'
+  );
+  const parsed = parseModelOutput(
+    'Claro!\n```json\n[{"id":"a","policy":"auto","reason":"leitura","next_step":"ok"},' +
+      '{"id":"b","policy":"nonsense"}]```'
+  );
+  assert.equal(parsed.length, 2);
+  assert.equal(parsed[0].policy, 'auto');
+  assert.equal(parsed[1].policy, 'propose');
+  assert.deepEqual(parseModelOutput('sem json aqui'), []);
+});
+
+test('EVA triage merge never downgrades commands and counts policies', () => {
+  const items = [
+    { id: 'command:1', source: 'command', risk: 'write', title: 'Aprovar reload' },
+    { id: 'key:APIFY_TOKEN', source: 'key', title: 'Chave opcional' },
+    { id: 'audit:deps', source: 'audit', title: 'Revisar dependências' },
+  ];
+  const merged = mergeClassifications(items, [
+    { id: 'command:1', policy: 'auto', reason: 'safe' },
+    { id: 'key:APIFY_TOKEN', policy: 'auto', reason: 'optional' },
+  ]);
+  assert.equal(merged[0].policy, 'blocked');
+  assert.equal(merged[0].forced, true);
+  assert.equal(merged[1].policy, 'auto');
+  assert.equal(merged[2].policy, 'propose');
+  assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
 });
