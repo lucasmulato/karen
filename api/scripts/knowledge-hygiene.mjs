@@ -49,7 +49,8 @@ async function main() {
         ORDER BY score DESC LIMIT 10`
     );
     report.proposals.duplicates = duplicates.rows.map((r) => ({
-      a: r.a_name, b: r.b_name, score: Number(r.score), propose: "review_merge",
+      a_id: r.a_id, b_id: r.b_id, a: r.a_name, b: r.b_name,
+      score: Number(r.score), propose: "review_merge",
     }));
 
     const archive = await client.query(

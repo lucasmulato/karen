@@ -155,6 +155,10 @@ external services beyond the free NVD/OSM/Cloudflare calls already approved.
   timer watchdog, advisory diff, cost flags and log sizes.
 - **Knowledge hygiene** (`knowledge-hygiene.json`): maturity/duplicate/archive/
   tag proposals plus a small external link check — proposals only.
+- **Hygiene proposals**: `apply-proposals.mjs --approve` applies tags, maturity,
+  archive flags and duplicate markers from `knowledge-hygiene.json`; no node is
+  deleted and no file is moved. `--revert` restores the exact prior properties.
+  Merge stays a proposal only.
 - **Backlinks**: `vault-garden.json` suggests; `apply-backlinks.mjs` requires
   `--approve`, a 7-day shadow period (or `--force`), and supports `--revert`
   with an audit file (`backlinks-applied.json`). Never edits note files.

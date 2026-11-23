@@ -31,6 +31,7 @@ export interface BriefReport {
   deadlines: { note: string; date: string; days_left: number }[];
   stale_decisions: { path: string; days: number }[];
   outreach_ready: number;
+  hygiene_proposals: number;
   watch: {
     opportunity_age_days: number | null;
     stale_opportunities: boolean;
@@ -83,7 +84,7 @@ export class BriefService {
   ) {}
 
   async build(): Promise<BriefReport> {
-    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport, outreach] = await Promise.all([
+    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport, outreach, hygiene] = await Promise.all([
       new QueueService(this.client).items().catch(() => []),
       readJson(`${DATA}/credit-recommendations.json`),
       readJson(process.env.KAREN_TRIAGE_JSON ?? `${DATA}/eva-triage.json`),
@@ -97,6 +98,7 @@ export class BriefService {
         .catch(() => 0),
       readJson(`${DATA}/knowledge-sync.json`),
       new OutreachService(this.client).items().then((items) => items.filter((i) => i.status === "ready").length).catch(() => 0),
+      readJson(`${DATA}/knowledge-hygiene.json`),
     ]);
 
     const needsYou = queue
@@ -144,6 +146,13 @@ export class BriefService {
     const leadsWithoutDraft = Number(leadRows ?? 0);
     if (leadsWithoutDraft > 0) steps.push(`${leadsWithoutDraft} lead(s) sem firstTouch — pré-redigir`);
     if (outreach > 0) steps.push(`${outreach} mensagem(ns) pronta(s) para envio manual no painel Mensagens`);
+    const hygieneCount = Object.values(hygiene?.proposals ?? {}).reduce(
+      (sum: number, list: unknown) => sum + (Array.isArray(list) ? list.length : 0),
+      0
+    );
+    if (hygieneCount > 0) {
+      steps.push(`${hygieneCount} proposta(s) de higiene — revisar e aplicar com apply-proposals.mjs --approve`);
+    }
 
     const watch = {
       opportunity_age_days: opportunityAge,
@@ -170,6 +179,7 @@ export class BriefService {
       deadlines,
       stale_decisions: staleDecisions,
       outreach_ready: outreach,
+      hygiene_proposals: hygieneCount,
       watch,
       health: diag ? formatDiagnosis(diag) : "Diagnóstico indisponível.",
       decisions,
@@ -213,6 +223,7 @@ export function formatBrief(brief: BriefReport): string {
     `- Leads sem firstTouch: ${brief.watch.leads_without_draft}`,
     `- Sync: ${brief.watch.sync}`,
     `- Mensagens prontas (envio manual): ${brief.outreach_ready}`,
+    `- Propostas de higiene pendentes: ${brief.hygiene_proposals}`,
     "",
     "⚖️ PRÓXIMO PASSO",
     ...brief.next_steps.map((step, i) => `${i + 1}. ${step}`),

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Applies the reversible knowledge-hygiene proposals (tags + maturity) with
- * explicit approval and one-command revert. Merge/archive remain proposals
- * only. Never rewrites note files or MEMORY.md.
+ * Applies the reversible knowledge-hygiene proposals (tags, maturity, archive
+ * flag and duplicate markers) with explicit approval and one-command revert.
+ * No node is deleted and no note file is moved: merge stays a proposal only.
  *
  *   node scripts/apply-proposals.mjs --dry-run
  *   node scripts/apply-proposals.mjs --approve
@@ -41,7 +41,8 @@ async function main() {
       const audit = await readJson(AUDIT);
       if (!audit?.nodes?.length) { console.log("Nada para reverter."); return; }
       let undone = 0;
-      for (const node of audit.nodes) {
+      // Reverse order so the earliest snapshot wins when a node changed twice.
+      for (const node of [...audit.nodes].reverse()) {
         try {
           await client.query("UPDATE nodes SET properties = $1::jsonb WHERE id = $2::uuid", [
             JSON.stringify(node.previous ?? {}),
@@ -96,6 +97,50 @@ async function main() {
         "UPDATE nodes SET properties = properties || $1::jsonb WHERE id = $2::uuid",
         [JSON.stringify({ maturity: proposal.propose }), proposal.id]
       );
+    }
+
+    // Archive: flag the node in Postgres — never move the actual file.
+    for (const proposal of report.proposals?.archive ?? []) {
+      if (!proposal?.id) continue;
+      const current = await client.query("SELECT properties FROM nodes WHERE id = $1::uuid", [proposal.id]);
+      if (!current.rows[0]) continue;
+      const previous = current.rows[0].properties ?? {};
+      if (previous.archived) continue;
+      changes.push({
+        id: proposal.id,
+        name: proposal.name,
+        field: "archived",
+        applied: true,
+        previous,
+      });
+      if (DRY) continue;
+      await client.query(
+        "UPDATE nodes SET properties = properties || $1::jsonb WHERE id = $2::uuid",
+        [JSON.stringify({ archived: true, archived_at: new Date().toISOString() }), proposal.id]
+      );
+    }
+
+    // Duplicates: mark both sides for review — never delete or merge nodes.
+    for (const pair of report.proposals?.duplicates ?? []) {
+      for (const id of [pair?.a_id, pair?.b_id]) {
+        if (!id) continue;
+        const current = await client.query("SELECT properties FROM nodes WHERE id = $1::uuid", [id]);
+        if (!current.rows[0]) continue;
+        const previous = current.rows[0].properties ?? {};
+        if (previous.duplicate_candidate) continue;
+        changes.push({
+          id,
+          name: id === pair.a_id ? pair.a : pair.b,
+          field: "duplicate_candidate",
+          applied: true,
+          previous,
+        });
+        if (DRY) continue;
+        await client.query(
+          "UPDATE nodes SET properties = properties || $1::jsonb WHERE id = $2::uuid",
+          [JSON.stringify({ duplicate_candidate: true }), id]
+        );
+      }
     }
 
     const audit = {
