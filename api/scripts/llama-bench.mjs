@@ -38,7 +38,7 @@ const USER = `${BLOCK.repeat(8)}\nPergunta: qual é a próxima ação segura? Re
 
 function serverPid() {
   try {
-    const out = execFileSync("pgrep", ["-f", "llama-server.*karen"], {
+    const out = execFileSync("pgrep", ["-f", process.env.LLAMA_PROCESS_MATCH ?? "llama-server.*karen"], {
       encoding: "utf8",
     }).trim();
     return out.split("\n")[0] || null;
