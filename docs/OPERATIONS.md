@@ -180,9 +180,15 @@ external services beyond the free NVD/OSM/Cloudflare calls already approved.
   24h. Read-only — it never blocks an address; review before acting.
 - **Self-model** (`karen-self-model`, daily 11:00): builds `self-model.json` and
   a compact `note-index.json` from the existing reports, plus a unified
-  `action-log.jsonl` (deduped by source + timestamp). A bounded ~1.2k-char block
+  `action-log.jsonl` (deduped by source + timestamp). A bounded ~1.4k-char block
   is injected into every chat as deterministic self-knowledge; the model never
   supplies those facts.
+- **Living identity** (`karen-about-sync`, daily 12:15): regenerates
+  `ABOUT.md` from persona + `MEMORY.md` + recent decisions + self-model, and a
+  compact `about-self.json` prompt block.
+- **EVA reflection** (`karen-eva-reflect`, daily 12:30): appends a dated section
+  to `reflection.md` with deterministic observations about her own outputs and
+  open gaps, plus a compact prompt block. No LLM involved.
 - **MEMORY.md promotion** (`apply-memory-draft.mjs --approve`): appends approved
   vault-garden draft lines via the same append-only path as `remember`. Audited
   in `memory-applied.json`; not mechanically reversible by design.

@@ -198,7 +198,7 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
 test('self context stays bounded so it never bloats the local prompt', async () => {
   const text = await selfContext();
   assert.ok(typeof text === 'string');
-  assert.ok(text.length <= 1200);
+  assert.ok(text.length <= 1400);
 });
 
 test('agent blocks mutating tools unless the operator explicitly asks', () => {
