@@ -816,11 +816,11 @@ const App: React.FC = () => {
           <aside className="w-full @md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 @md:border-l-0 bg-black">
             {showChat && (
               <WorkspacePane
-                title="KAREN"
-                subtitle="Chat com o second brain"
+                title={mode === 'eva' ? 'EVA' : 'KAREN'}
+                subtitle={mode === 'eva' ? 'Modo profissional · decisões e prospecção' : 'Modo pessoal e segurança · second brain'}
                 onClose={() => setShowChat(false)}
               >
-                <ChatPanel onGraphChanged={refresh} command={chatCommand} />
+                <ChatPanel onGraphChanged={refresh} command={chatCommand} mode={mode} />
               </WorkspacePane>
             )}
 

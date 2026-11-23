@@ -199,7 +199,14 @@ For routine questions (`quantas notas`, `como você está`, `o que você fez`,
 `aprovações pendentes`, `mensagens prontas`, CVEs, auth), `POST /api/chat` may
 answer from a deterministic fast path (`services/fastpath.ts`) with
 `source: "fastpath"` — no LLM call, sub-second response. Ambiguous or reasoning
-questions fall through to the agent. `/diagnosis` keeps priority.
+questions fall through to the agent. `/diagnosis` keeps priority. Deadlines are
+read from note frontmatter and graph `properties.deadline`.
+
+The chat panel title and subtitle follow the active persona: **EVA** (professional,
+decisions/prospecting) or **KAREN** (personal/security). Quick prompts are also
+persona-aware — EVA shows Brief/Decisões/Mensagens/Leads/Prazos; KAREN shows
+Status/Jardim/Notas/Memória. The placeholder changes to "Pergunte à EVA..." or
+"Pergunte à KAREN..." accordingly.
 
 ## Manual WhatsApp handoff
 

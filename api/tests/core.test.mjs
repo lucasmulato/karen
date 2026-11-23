@@ -201,6 +201,7 @@ test('fast path only intercepts clear routine questions', () => {
   assert.equal(matchIntent('Como você está?'), 'status');
   assert.equal(matchIntent('O que você fez hoje?'), 'self');
   assert.equal(matchIntent('Quantas mensagens prontas?'), 'leads');
+  assert.equal(matchIntent('Quais prazos vencem em breve?'), 'deadlines');
   assert.equal(matchIntent('O que você acha da minha arquitetura de segurança?'), null);
   assert.equal(matchIntent('Explique por que SSRF acontece'), null);
   assert.equal(matchIntent('E se trocarmos o modelo por um 8B?'), null);

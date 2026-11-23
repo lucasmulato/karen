@@ -30,16 +30,26 @@ interface ChatPanelProps {
   onGraphChanged?: () => void;
   /** Palette-driven command, e.g. { id: 1, text: '/diagnosis' }. */
   command?: { id: number; text: string } | null;
+  /** Active persona: EVA = professional/prospecting, KAREN = personal/security. */
+  mode?: 'karen' | 'eva';
 }
 
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
-const QUICK_PROMPTS = [
-  { label: 'Status', text: 'Use system_status e me diga se os serviços estão ok' },
+const KAREN_PROMPTS = [
+  { label: 'Status', text: 'Como você está?' },
   { label: 'Jardim', text: 'Use garden_report e me diga quantas notas estão órfãs' },
-  { label: 'Leads', text: 'busca restaurantes sem site em Guarulhos, máximo 5 lugares' },
+  { label: 'Notas', text: 'Quantas notas há no vault?' },
   { label: 'Memória', text: 'O que você lembra sobre mim?' },
+];
+
+const EVA_PROMPTS = [
+  { label: 'Brief', text: 'Me dê um briefing da situação' },
+  { label: 'Decisões', text: 'O que preciso decidir?' },
+  { label: 'Mensagens', text: 'Quantas mensagens prontas?' },
+  { label: 'Leads', text: 'busca restaurantes sem site em Guarulhos, máximo 5 lugares' },
+  { label: 'Prazos', text: 'Quais prazos vencem em breve?' },
 ];
 
 const show = (value: unknown): string =>
@@ -93,7 +103,8 @@ const DiagnosisCard: React.FC<{ report: DiagnosisReport; onNarrate: () => void; 
   );
 };
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ onGraphChanged, command }) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ onGraphChanged, command, mode = 'karen' }) => {
+  const quickPrompts = mode === 'eva' ? EVA_PROMPTS : KAREN_PROMPTS;
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -232,7 +243,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onGraphChanged, command }) => {
       </div>
 
       <div className="flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1">
-        {QUICK_PROMPTS.map((p) => (
+        {quickPrompts.map((p) => (
           <button
             key={p.label}
             onClick={() => submit(p.text)}
@@ -258,7 +269,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onGraphChanged, command }) => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={
-            configured ? 'Pergunte à KAREN... (/diagnosis)' : 'Chat desativado'
+            configured
+              ? `Pergunte à ${mode === 'eva' ? 'EVA' : 'KAREN'}... (/diagnosis)`
+              : 'Chat desativado'
           }
           disabled={configured !== true || busy}
           className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"

@@ -2,13 +2,14 @@
  * Deterministic fast path for routine questions. Answers only from local
  * reports; anything ambiguous or requiring reasoning falls back to the LLM.
  */
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
+import { join } from "node:path";
 import type { Client } from "pg";
 import { QueueService } from "./queue.js";
 import { DiagnosisService } from "./diagnosis.js";
 
 const DATA = "/home/admin/karen/api/data";
-export type Intent = "status" | "notes" | "self" | "queue" | "brief" | "cve" | "auth" | "leads";
+export type Intent = "status" | "notes" | "self" | "queue" | "brief" | "cve" | "auth" | "leads" | "deadlines";
 
 const RULES: { intent: Intent; re: RegExp }[] = [
   // No trailing \b: accented endings are not \\w in JS without the u flag.
@@ -20,6 +21,7 @@ const RULES: { intent: Intent; re: RegExp }[] = [
   { intent: "cve", re: /\b(cves novos|cves novas|vulnerabilidades novas|novas cves)/i },
   { intent: "auth", re: /\b(ips suspeitos|tentativas de login|falhas de ssh|logins falhos)/i },
   { intent: "leads", re: /\b(mensagens prontas|leads prontos|rascunhos de mensagem)/i },
+  { intent: "deadlines", re: /\b(prazos?|deadlines?|vence(m)? (em breve|logo)|o que vem a seguir)/i },
 ];
 
 /** Reasoning requests must never be intercepted by the fast path. */
@@ -106,6 +108,37 @@ export async function fastPath(message: string, client: Client, diagnosis: Diagn
         "SELECT COUNT(*)::int AS n FROM leads WHERE suppressed = FALSE AND draft->>'firstTouch' IS NOT NULL AND draft->>'firstTouch' <> ''"
       );
       return { intent, reply: `${res.rows[0]?.n ?? 0} mensagem(ns) pronta(s) para envio manual no painel Mensagens.` };
+    }
+    case "deadlines": {
+      const root = process.env.KAREN_VAULT_DIR || "/home/admin/models/karen-vault";
+      const found: { note: string; date: string; days_left: number }[] = [];
+      async function walk(dir: string) {
+        let entries;
+        try { entries = await readdir(dir, { withFileTypes: true }); } catch { return; }
+        for (const entry of entries) {
+          const full = join(dir, entry.name);
+          if (entry.isDirectory()) { await walk(full); continue; }
+          if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+          try {
+            const text = await readFile(full, "utf8");
+            const front = text.match(/^---\n([\s\S]*?)\n---/);
+            const date = front?.[1].match(/^deadline:\s*(\d{4}-\d{2}-\d{2})/m)?.[1];
+            if (!date) continue;
+            const days = Math.ceil((Date.parse(date) - Date.now()) / 86_400_000);
+            if (days >= -1 && days <= 30) found.push({ note: entry.name, date, days_left: days });
+          } catch { /* skip */ }
+        }
+      }
+      await walk(root);
+      found.sort((a, b) => a.days_left - b.days_left);
+      if (!found.length) return { intent, reply: "Nenhum prazo nos próximos 30 dias." };
+      return {
+        intent,
+        reply: found
+          .slice(0, 4)
+          .map((d) => `${d.date} (${d.days_left}d): ${d.note}`)
+          .join(" · "),
+      };
     }
   }
 }

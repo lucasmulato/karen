@@ -59,8 +59,12 @@ async function readJson(path: string): Promise<any | null> {
 }
 
 /** Deadlines from note frontmatter, only the next 30 days. */
-async function collectDeadlines(notes: VaultFsService) {
+async function collectDeadlines(
+  notes: VaultFsService,
+  client?: import("pg").Client
+) {
   const out: { note: string; date: string; days_left: number }[] = [];
+  // Frontmatter is the primary source.
   for (const path of await notes.list().catch(() => [])) {
     if (!path.endsWith(".md")) continue;
     const text = await notes.read(path).catch(() => "");
@@ -70,7 +74,26 @@ async function collectDeadlines(notes: VaultFsService) {
     const days = Math.ceil((Date.parse(date) - Date.now()) / 86_400_000);
     if (days >= -1 && days <= 30) out.push({ note: path, date, days_left: days });
   }
-  return out.sort((a, b) => a.days_left - b.days_left).slice(0, 8);
+  // Graph properties as a fallback (notes synced with deadline metadata).
+  if (client) {
+    try {
+      const res = await client.query(
+        `SELECT name, properties->>'deadline' AS date FROM nodes
+          WHERE properties->>'deadline' IS NOT NULL ORDER BY updated_at DESC LIMIT 20`
+      );
+      for (const row of res.rows) {
+        const date = String(row.date ?? "");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+        const days = Math.ceil((Date.parse(date) - Date.now()) / 86_400_000);
+        if (days >= -1 && days <= 30) out.push({ note: row.name, date, days_left: days });
+      }
+    } catch { /* optional */ }
+  }
+  const seen = new Set<string>();
+  return out
+    .filter((d) => (seen.has(`${d.note}:${d.date}`) ? false : (seen.add(`${d.note}:${d.date}`), true)))
+    .sort((a, b) => a.days_left - b.days_left)
+    .slice(0, 8);
 }
 
 /** Decisions older than a week without an explicit resolution marker. */
@@ -102,7 +125,7 @@ export class BriefService {
       readJson(process.env.KAREN_GARDEN_JSON ?? `${DATA}/vault-maintenance.json`),
       this.notes.decisions(5).catch(() => []),
       this.diagnosis ? this.diagnosis.report().catch(() => null) : Promise.resolve(null),
-      collectDeadlines(this.notes).catch(() => []),
+      collectDeadlines(this.notes, this.client).catch(() => []),
       this.client
         .query("SELECT COUNT(*)::int AS n FROM leads WHERE draft->>'firstTouch' IS NULL OR draft->>'firstTouch' = ''")
         .then((r) => r.rows[0]?.n ?? 0)
