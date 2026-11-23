@@ -16,6 +16,7 @@ import { normalizePhone, buildWaLink, OutreachService } from "../build/services/
 import { autoResolvable, summarizeResolutions } from "../scripts/lib/auto-resolve.mjs";
 import { hasMutationIntent, isMutatingTool } from "../build/services/agent-guard.js";
 import { redactSecrets } from "../build/services/redact.js";
+import { selfContext } from "../build/services/self-context.js";
 import {
   hardPolicy,
   parseModelOutput,
@@ -192,6 +193,12 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.equal(merged[1].policy, 'auto');
   assert.equal(merged[2].policy, 'propose');
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
+});
+
+test('self context stays bounded so it never bloats the local prompt', async () => {
+  const text = await selfContext();
+  assert.ok(typeof text === 'string');
+  assert.ok(text.length <= 1200);
 });
 
 test('agent blocks mutating tools unless the operator explicitly asks', () => {

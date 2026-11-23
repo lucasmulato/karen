@@ -178,6 +178,14 @@ external services beyond the free NVD/OSM/Cloudflare calls already approved.
 - **Canvas sync**: `Mapa.canvas` is regenerated from the graph; no note is edited.
 - **Auth correlation** (`auth-correlation.json`): SSH failures grouped by IP over
   24h. Read-only — it never blocks an address; review before acting.
+- **Self-model** (`karen-self-model`, daily 11:00): builds `self-model.json` and
+  a compact `note-index.json` from the existing reports, plus a unified
+  `action-log.jsonl` (deduped by source + timestamp). A bounded ~1.2k-char block
+  is injected into every chat as deterministic self-knowledge; the model never
+  supplies those facts.
+- **MEMORY.md promotion** (`apply-memory-draft.mjs --approve`): appends approved
+  vault-garden draft lines via the same append-only path as `remember`. Audited
+  in `memory-applied.json`; not mechanically reversible by design.
 
 ## Manual WhatsApp handoff
 

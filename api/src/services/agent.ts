@@ -8,6 +8,7 @@ import type { GardenService } from "./garden.js";
 import { formatDiagnosis, type DiagnosisService } from "./diagnosis.js";
 import { formatBrief, type BriefService } from "./brief.js";
 import { hasMutationIntent, isMutatingTool } from "./agent-guard.js";
+import { selfContext } from "./self-context.js";
 
 /**
  * Cyber second-brain reasoning layer.
@@ -438,6 +439,7 @@ export class GraphAgent {
     const memory = this.notes ? await this.notes.memory() : "";
     const activeContext = this.notes ? await this.notes.activeContext() : "personal";
     const mode = this.notes ? await this.notes.activeMode() : "karen";
+    const selfState = await selfContext().catch(() => "");
     const persona = loadPersona(mode);
     const environment = [
       `MODO ATIVO: ${mode.toUpperCase()}. ${mode === "eva" ? "Você é EVA, co-sócia: traga recomendações proativas, nunca aja sozinha." : "Você é KAREN, assistente."}`,
@@ -449,6 +451,9 @@ export class GraphAgent {
       context
         ? `Contexto recuperado do grafo (use como fonte, cite quando relevante):\n${context}`
         : "Nenhum contexto prévio encontrado no grafo para esta pergunta.",
+      selfState
+        ? `AUTO-CONHECIMENTO (determinístico, use para falar de si e do vault):\n${selfState}`
+        : "",
       "Use search_nodes/search_notes para consultar o grafo antes de responder quando fizer sentido; não filtre por 'type' salvo pedido explícito do usuário.",
       "Use add_finding e link_technique para registrar achados e ligá-los a técnicas.",
       "Use find_leads para buscar prospects (OSM grátis) e redigir mensagens 1:1 (firstTouch sem link, followUp depois). Nunca envie mensagens — o operador copia e envia.",
