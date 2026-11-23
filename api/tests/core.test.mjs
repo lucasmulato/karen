@@ -8,6 +8,7 @@ import { CanvasService } from "../build/services/canvas.js";
 import { DashboardService } from "../build/services/dashboard.js";
 import { DiagnosisService, formatDiagnosis } from "../build/services/diagnosis.js";
 import { VaultService } from "../build/services/vault.js";
+import { pickSuggestions, memoryDraft } from "../scripts/lib/vault-garden.mjs";
 import {
   hardPolicy,
   parseModelOutput,
@@ -164,6 +165,28 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.equal(merged[1].policy, 'auto');
   assert.equal(merged[2].policy, 'propose');
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
+});
+
+test('vault garden produces suggestions and drafts without mutations', () => {
+  const picked = pickSuggestions(
+    [
+      { id: 'a', name: 'A', score: 0.91 },
+      { id: 'b', name: 'B', score: 0.40 },
+      { id: 'c', name: 'C', score: 0.77 },
+      { id: 'd', name: 'D', score: Number.NaN },
+    ],
+    0.55,
+    2
+  );
+  assert.deepEqual(picked.map((p) => p.id), ['a', 'c']);
+  const draft = memoryDraft(
+    '# Memória\n\n- decisions/antiga.md: Já registrado',
+    [
+      { path: 'decisions/nova.md', text: '# Nova decisão\n\n- Data: 2026-11-23' },
+      { path: 'decisions/antiga.md', text: '# Já registrado' },
+    ]
+  );
+  assert.deepEqual(draft, ['- decisions/nova.md: Nova decisão']);
 });
 
 test('vault search fuses full-text and ILIKE results via RRF', async () => {

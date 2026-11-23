@@ -23,6 +23,7 @@ const ACTIONS = resolve("/home/admin/karen/api/data/action-items.json");
 const ENV_FILE = resolve(process.env.KAREN_ENV_FILE || "/home/admin/models/karen.env");
 const OPTIONAL_KEYS = ["APIFY_TOKEN", "CLOUDFLARE_API_TOKEN"];
 const TRIAGE = resolve(process.env.KAREN_TRIAGE_JSON || "/home/admin/karen/api/data/eva-triage.json");
+const GARDEN = resolve(process.env.KAREN_GARDEN_JSON || "/home/admin/karen/api/data/vault-maintenance.json");
 
 function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (c) =>
@@ -70,6 +71,17 @@ async function triageSummary() {
   } catch { return null; }
 }
 
+async function gardenMaintenance() {
+  try {
+    const data = JSON.parse(await readFile(GARDEN, "utf8"));
+    return {
+      orphans: Number(data.orphans_total ?? 0),
+      withCandidates: Number(data.with_candidates ?? 0),
+      draft: Array.isArray(data.memory_draft) ? data.memory_draft.length : 0,
+    };
+  } catch { return null; }
+}
+
 async function missingOptionalKeys() {
   let envText = "";
   try { envText = await readFile(ENV_FILE, "utf8"); } catch { /* ignore */ }
@@ -93,6 +105,7 @@ async function main() {
   const optionalMissing = await missingOptionalKeys();
   const approvals = await pendingApprovals();
   const triage = await triageSummary();
+  const garden = await gardenMaintenance();
   const subject = EVENING
     ? `KAREN · noite · ${report.date} · ${approvals} aprovações, ${top.length} prioridades`
     : `KAREN · ${report.date} · ${approvals} aprovações, ${top.length} prioridades`;
@@ -123,6 +136,13 @@ async function main() {
           `<p>${triage.total} item(ns) triados: <b>${triage.auto}</b> resolvidos automaticamente, ` +
             `<b>${triage.propose}</b> precisam da sua decisão, <b>${triage.blocked}</b> bloqueados por regra de segurança. ` +
             `A triagem nunca executa ações — itens "auto" são apenas leitura/reversíveis.</p>`,
+        ]
+      : []),
+    ...(garden
+      ? [
+          `<h2>EVA · jardim</h2>`,
+          `<p>${garden.orphans} notas órfãs, ${garden.withCandidates} com sugestões de backlink e ${garden.draft} linha(s) de rascunho para MEMORY.md. ` +
+            `Nada foi aplicado automaticamente — revisar em api/data/vault-maintenance.json.</p>`,
         ]
       : []),
     `<h2>Pendências</h2>`,
