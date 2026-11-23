@@ -82,6 +82,9 @@ curl -s http://127.0.0.1:3000/api/health/full
 | `karen-cve-watch` | daily 07:30 | free NVD watchlist for the tools KAREN runs |
 | `karen-hygiene` | Monday 07:45 | VACUUM ANALYZE, permissions, timer watchdog, cost/audit diff |
 | `karen-knowledge-hygiene` | Monday 07:00 | maturity/duplicate/archive/tag proposals + link check |
+| `karen-canvas-sync` | daily 07:45 | regenerate `Mapa.canvas` from the Postgres graph |
+| `karen-auth-correlate` | daily 09:30 | SSH failures from journal, grouped by IP (read-only) |
+| `karen-state-diff` | daily 09:45 | nodes/edges changed since the previous daily snapshot |
 
 Run one manually: `sudo systemctl start <name>.service`. Logs:
 `journalctl -u <name>.service -n 50`.
@@ -164,6 +167,11 @@ external services beyond the free NVD/OSM/Cloudflare calls already approved.
   with an audit file (`backlinks-applied.json`). Never edits note files.
 - **Deploy**: `build_ui` calls `api/scripts/deploy-ui.sh` — test gate → build →
   backup → swap → smoke test → automatic rollback.
+- **Graph diff** (`state-diff.json`): daily snapshot comparison of nodes/edges;
+  the first run only records the baseline.
+- **Canvas sync**: `Mapa.canvas` is regenerated from the graph; no note is edited.
+- **Auth correlation** (`auth-correlation.json`): SSH failures grouped by IP over
+  24h. Read-only — it never blocks an address; review before acting.
 
 ## Manual WhatsApp handoff
 
