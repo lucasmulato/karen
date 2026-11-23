@@ -118,6 +118,27 @@ To re-measure after any change: edit
 benchmark. Wait for the model to answer (not just `/health`) before measuring.
 The previous unit is kept at `/home/admin/karen-llama.service.bak`.
 
+## Self-diagnosis (`/diagnosis`)
+
+KAREN can report her own state from deterministic data instead of guessing:
+
+- `GET /api/diagnosis` — read-only JSON report, cached for 60 s. Collects
+  systemd unit state, next timers, llama health/RSS/context/threads and last
+  benchmark, queue policy counts, EVA triage summary, garden counts, dependency
+  advisories, certificate days (read over TLS, no root needed) and backup age.
+  Failed sources become `"indisponível"` and are listed in `issues`. No env
+  values, tokens, command args or stack traces are returned.
+- `/diagnosis` typed in the chat (or chosen from the `/` palette) renders the
+  same report as a card. The **Narrar com EVA** button asks the model to explain
+  those numbers in natural language; it cannot change them.
+- `POST /api/chat` with `{"message":"/diagnosis"}` returns the text version
+  (`source: "diagnosis"`) and works even when the LLM is disabled.
+- The agent also has a read-only `system_status` tool backed by the same
+  collector, so it can cite its own state in any conversation.
+
+Diagnostic fields are whitelisted in `api/src/services/diagnosis.ts`; add new
+sources there rather than passing raw files or env vars to the model.
+
 ## Restore a backup
 
 ```bash

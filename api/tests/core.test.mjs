@@ -6,6 +6,7 @@ import { COMMANDS } from "../build/services/commands.js";
 import { draftFor } from "../build/templates/outreach.js";
 import { CanvasService } from "../build/services/canvas.js";
 import { DashboardService } from "../build/services/dashboard.js";
+import { DiagnosisService, formatDiagnosis } from "../build/services/diagnosis.js";
 import {
   hardPolicy,
   parseModelOutput,
@@ -162,4 +163,23 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.equal(merged[1].policy, 'auto');
   assert.equal(merged[2].policy, 'propose');
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
+});
+
+test('diagnosis collects whitelisted state without secrets', async () => {
+  const client = {
+    query: async (sql) => {
+      if (sql.includes('COUNT(*)::int AS total')) {
+        return { rows: [{ total: 10, seedling: 2, budding: 3, evergreen: 4, stale: 1 }] };
+      }
+      return { rows: [] };
+    },
+  };
+  const report = await new DiagnosisService(client).report();
+  assert.ok(typeof report.services.api === 'string');
+  assert.equal(report.garden.notes, 10);
+  assert.equal(typeof report.attention.total, 'number');
+  assert.ok(report.issues instanceof Array);
+  const text = JSON.stringify(report);
+  assert.ok(!/DATABASE_URL=|APP_PASSWORD=|API_KEY=[A-Za-z0-9]/.test(text));
+  assert.ok(formatDiagnosis(report).includes('DIAGNÓSTICO — KAREN'));
 });

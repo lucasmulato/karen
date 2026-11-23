@@ -24,6 +24,7 @@ import { DashboardService } from "./services/dashboard.js";
 import { QueueService } from "./services/queue.js";
 import { PortalService } from "./services/portal.js";
 import { AuthService } from "./services/auth.js";
+import { DiagnosisService, formatDiagnosis } from "./services/diagnosis.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -59,6 +60,7 @@ const dashboard = new DashboardService(client, notes);
 const queue = new QueueService(client);
 const portal = new PortalService(notes);
 const auth = new AuthService();
+const diagnosis = new DiagnosisService(client);
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -71,7 +73,7 @@ const leads = new LeadService(client, leadProvider, {
 
 // Optional reasoning layer: only constructed when LLM_API_KEY is set.
 const agent = chatConfigFromEnv()
-  ? new GraphAgent(chatConfigFromEnv()!, vault, leads, commands, notes, garden)
+  ? new GraphAgent(chatConfigFromEnv()!, vault, leads, commands, notes, garden, diagnosis)
   : null;
 
 // 3. MCP Server Setup
@@ -590,6 +592,11 @@ async function handleHttp(
       return;
     }
 
+    if (req.method === "GET" && path === "/api/diagnosis") {
+      sendJson(res, 200, await diagnosis.report());
+      return;
+    }
+
     if (req.method === "GET" && path === "/api/graph") {
       const graph = await vault.getGraph();
       const excludeNotes = url.searchParams.get("exclude_notes") === "true";
@@ -1041,6 +1048,21 @@ async function handleHttp(
         sendJson(res, 429, { error: "Too many requests" });
         return;
       }
+      const parsed = chatSchema.safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      // /diagnosis works even if the LLM is disabled: it is deterministic.
+      const message = parsed.data.message.trim();
+      if (/^\/diagnosis\b/i.test(message)) {
+        sendJson(res, 200, {
+          reply: formatDiagnosis(await diagnosis.report()),
+          actions: [],
+          source: "diagnosis",
+        });
+        return;
+      }
       if (!agent) {
         sendJson(res, 503, {
           error:
@@ -1048,12 +1070,7 @@ async function handleHttp(
         });
         return;
       }
-      const parsed = chatSchema.safeParse(await readBody(req));
-      if (!parsed.success) {
-        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
-        return;
-      }
-      const result = await agent.chat(parsed.data.message);
+      const result = await agent.chat(message);
       sendJson(res, 200, result);
       return;
     }

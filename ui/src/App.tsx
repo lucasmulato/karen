@@ -81,6 +81,7 @@ const App: React.FC = () => {
     { source?: string; label?: EdgeLabel } | null
   >(null);
   const [showChat, setShowChat] = useState(false);
+  const [chatCommand, setChatCommand] = useState<{ id: number; text: string } | null>(null);
   const [showLeads, setShowLeads] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
   const [showEva, setShowEva] = useState(false);
@@ -406,6 +407,10 @@ const App: React.FC = () => {
     { id: 'keys', label: 'Ver status das chaves', hint: 'configured/missing', icon: PALETTE_ICONS.keys, run: async () => {
       const d = await fetch(`${API_BASE}/chat/status`).then((r) => r.json());
       toast(`leads: ${d.leads?.configured ? 'on' : 'off'} · modelo ${d.model}`);
+    } },
+    { id: 'diagnosis', label: 'Diagnóstico da KAREN', hint: '/diagnosis · estado real', icon: PALETTE_ICONS.health, run: () => {
+      openPane('chat');
+      setChatCommand({ id: Date.now(), text: '/diagnosis' });
     } },
   ];
 
@@ -788,7 +793,7 @@ const App: React.FC = () => {
                 subtitle="Chat com o second brain"
                 onClose={() => setShowChat(false)}
               >
-                <ChatPanel onGraphChanged={refresh} />
+                <ChatPanel onGraphChanged={refresh} command={chatCommand} />
               </WorkspacePane>
             )}
 
