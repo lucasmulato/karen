@@ -13,7 +13,7 @@ import { connect as tlsConnect } from "node:tls";
 const run = promisify(execFile);
 const ACTIONS = resolve("/home/admin/karen/api/data/action-items.json");
 const BACKUP_DIR = resolve(process.env.KAREN_BACKUP_DIR || "/home/admin/backups/karen");
-const HOST = process.env.KAREN_PUBLIC_HOST || "karen.164.68.109.252.sslip.io";
+const HOST = process.env.KAREN_PUBLIC_HOST || null;
 
 function item(topic, title, steps, severity = "urgent") {
   return { topic, title, steps, severity };
@@ -71,8 +71,8 @@ async function main() {
     }
   } catch { /* ignore */ }
 
-  // 4. certificate days
-  try {
+  // 4. certificate days (only when the public host is configured)
+  if (HOST) try {
     const days = await new Promise((resolveDays) => {
       const socket = tlsConnect(
         { host: HOST, port: 443, servername: HOST, rejectUnauthorized: false },

@@ -21,8 +21,7 @@ const TRIAGE = process.env.KAREN_TRIAGE_JSON ?? `${DATA}/eva-triage.json`;
 const AUDIT = process.env.KAREN_AUDIT_JSON ?? `${DATA}/dependency-audit.json`;
 const BENCH = `${DATA}/llama-bench.jsonl`;
 const UNIT = "/etc/systemd/system/karen-llama.service";
-const PUBLIC_HOST =
-  process.env.KAREN_PUBLIC_HOST ?? "karen.164.68.109.252.sslip.io";
+const PUBLIC_HOST = process.env.KAREN_PUBLIC_HOST ?? "";
 const BACKUPS = "/home/admin/karen-backups";
 
 export interface DiagnosisReport {
@@ -188,6 +187,10 @@ export class DiagnosisService {
           issues,
           () =>
             new Promise<number>((resolve, reject) => {
+              if (!PUBLIC_HOST) {
+                reject(new Error("KAREN_PUBLIC_HOST não configurado"));
+                return;
+              }
               const socket = tlsConnect(
                 {
                   host: PUBLIC_HOST,

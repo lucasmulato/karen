@@ -565,9 +565,10 @@ async function handleHttp(
       try {
         // Inspect the certificate actually served, without needing root access
         // to /etc/letsencrypt/live.
-        const host =
-          process.env.KAREN_PUBLIC_HOST ?? "karen.164.68.109.252.sslip.io";
-        checks.cert = await new Promise((resolve) => {
+        const host = process.env.KAREN_PUBLIC_HOST?.trim();
+        if (!host) {
+          checks.cert = { status: "unconfigured" };
+        } else checks.cert = await new Promise((resolve) => {
           const socket = tlsConnect(
             { host, port: 443, servername: host, rejectUnauthorized: false },
             () => {
