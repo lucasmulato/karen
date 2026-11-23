@@ -17,6 +17,7 @@ import { autoResolvable, summarizeResolutions } from "../scripts/lib/auto-resolv
 import { hasMutationIntent, isMutatingTool } from "../build/services/agent-guard.js";
 import { redactSecrets } from "../build/services/redact.js";
 import { selfContext } from "../build/services/self-context.js";
+import { matchIntent } from "../build/services/fastpath.js";
 import {
   hardPolicy,
   parseModelOutput,
@@ -193,6 +194,17 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.equal(merged[1].policy, 'auto');
   assert.equal(merged[2].policy, 'propose');
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
+});
+
+test('fast path only intercepts clear routine questions', () => {
+  assert.equal(matchIntent('Quantas notas há no vault?'), 'notes');
+  assert.equal(matchIntent('Como você está?'), 'status');
+  assert.equal(matchIntent('O que você fez hoje?'), 'self');
+  assert.equal(matchIntent('Quantas mensagens prontas?'), 'leads');
+  assert.equal(matchIntent('O que você acha da minha arquitetura de segurança?'), null);
+  assert.equal(matchIntent('Explique por que SSRF acontece'), null);
+  assert.equal(matchIntent('E se trocarmos o modelo por um 8B?'), null);
+  assert.equal(matchIntent(''), null);
 });
 
 test('self context stays bounded so it never bloats the local prompt', async () => {

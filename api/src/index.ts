@@ -27,6 +27,7 @@ import { AuthService } from "./services/auth.js";
 import { DiagnosisService, formatDiagnosis } from "./services/diagnosis.js";
 import { BriefService } from "./services/brief.js";
 import { OutreachService, STATUSES } from "./services/outreach.js";
+import { fastPath } from "./services/fastpath.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -1100,6 +1101,12 @@ async function handleHttp(
           actions: [],
           source: "diagnosis",
         });
+        return;
+      }
+      // Routine questions are answered from deterministic state, instantly.
+      const fast = await fastPath(message, client, diagnosis);
+      if (fast) {
+        sendJson(res, 200, { reply: fast.reply, actions: [], source: "fastpath", intent: fast.intent });
         return;
       }
       if (!agent) {
