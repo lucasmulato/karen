@@ -10,6 +10,7 @@ import { DiagnosisService, formatDiagnosis } from "../build/services/diagnosis.j
 import { VaultService } from "../build/services/vault.js";
 import { formatBrief } from "../build/services/brief.js";
 import { pickSuggestions, memoryDraft } from "../scripts/lib/vault-garden.mjs";
+import { findSecrets } from "../scripts/lib/secret-scan.mjs";
 import {
   hardPolicy,
   parseModelOutput,
@@ -183,6 +184,18 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.equal(merged[1].policy, 'auto');
   assert.equal(merged[2].policy, 'propose');
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
+});
+
+test('secret scan reports pattern and line without leaking the value', () => {
+  const findings = findSecrets(
+    'token: cfat_abcdefghijklmnopqrst\n# example: cfat_xxxxxxxxxxxxxxxxxxxx\npassword=supersecretvalue1234567890',
+    'nota.md'
+  );
+  assert.equal(findings.length, 2);
+  assert.equal(findings[0].line, 1);
+  assert.equal(findings[0].pattern, 'cloudflare_token');
+  assert.ok(!JSON.stringify(findings).includes('cfat_abcdefghijklmnopqrst'));
+  assert.ok(!JSON.stringify(findings).includes('supersecretvalue1234567890'));
 });
 
 test('EVA brief renders pending decisions and next steps', () => {
