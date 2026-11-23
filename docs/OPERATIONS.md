@@ -77,9 +77,17 @@ curl -s http://127.0.0.1:3000/api/health/full
 | `karen-eva-weekly` | Monday 10:00 | EVA strategy-review e-mail |
 | `karen-eva-triage` | daily 23:30 | EVA classifies queue items (`auto` / `propose` / `blocked`) |
 | `karen-vault-garden` | daily 05:00 | orphan backlink suggestions + MEMORY.md draft (never applies) |
+| `karen-secret-scan` | daily 07:00 | local secret scan (repo + vault), pattern/line only |
+| `karen-knowledge-sync` | daily 07:15 | auto-embed new nodes + extract CVE/tool entities |
+| `karen-cve-watch` | daily 07:30 | free NVD watchlist for the tools KAREN runs |
+| `karen-hygiene` | Monday 07:45 | VACUUM ANALYZE, permissions, timer watchdog, cost/audit diff |
+| `karen-knowledge-hygiene` | Monday 07:00 | maturity/duplicate/archive/tag proposals + link check |
 
 Run one manually: `sudo systemctl start <name>.service`. Logs:
 `journalctl -u <name>.service -n 50`.
+
+Log rotation is configured in `/etc/logrotate.d/karen` (weekly, 4 rotations,
+compress, 100 MB threshold, copytruncate).
 
 ### E-mail cadence
 
@@ -130,6 +138,32 @@ panel renders it; the agent exposes it as the `eva_brief` tool. As with
 Command policies are now explicit: `GET /api/commands` includes `policy`
 (`auto` for reads, `propose` for reversible writes, `blocked` for
 `restart_api` / `reload_web`), and the command panel shows the badge.
+
+## Autonomy jobs
+
+All autonomy is deterministic: rules execute, the model only narrates. Every
+job writes a report under `api/data/` and never touches secrets, notes or
+external services beyond the free NVD/OSM/Cloudflare calls already approved.
+
+- **Secret scan** (`secret-scan.json`): repo + vault, reports pattern and line
+  only — never the value.
+- **CVE watch** (`cve-watch.json`): NVD keyword search for the products in
+  `api/config/cve-watchlist.json`, 7-day window, CVSS >= 7, only new IDs alerted.
+- **Knowledge sync** (`knowledge-sync.json`): embeds nodes created since the
+  last backfill and extracts CVE/tool entities from fresh notes; idempotent.
+- **System hygiene** (`system-hygiene.json`): `VACUUM ANALYZE`, file modes,
+  timer watchdog, advisory diff, cost flags and log sizes.
+- **Knowledge hygiene** (`knowledge-hygiene.json`): maturity/duplicate/archive/
+  tag proposals plus a small external link check — proposals only.
+- **Backlinks**: `vault-garden.json` suggests; `apply-backlinks.mjs` requires
+  `--approve`, a 7-day shadow period (or `--force`), and supports `--revert`
+  with an audit file (`backlinks-applied.json`). Never edits note files.
+- **Deploy**: `build_ui` calls `api/scripts/deploy-ui.sh` — test gate → build →
+  backup → swap → smoke test → automatic rollback.
+
+Never automated: sending messages/e-mails to third parties, accounts, payments,
+deleting data, rewriting `MEMORY.md`, dependency auto-patching, backups restore
+and paid APIs.
 
 ## llama.cpp tuning
 
