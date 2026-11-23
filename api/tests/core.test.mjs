@@ -7,6 +7,7 @@ import { draftFor } from "../build/templates/outreach.js";
 import { CanvasService } from "../build/services/canvas.js";
 import { DashboardService } from "../build/services/dashboard.js";
 import { DiagnosisService, formatDiagnosis } from "../build/services/diagnosis.js";
+import { VaultService } from "../build/services/vault.js";
 import {
   hardPolicy,
   parseModelOutput,
@@ -163,6 +164,25 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.equal(merged[1].policy, 'auto');
   assert.equal(merged[2].policy, 'propose');
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
+});
+
+test('vault search fuses full-text and ILIKE results via RRF', async () => {
+  const calls = [];
+  const client = {
+    query: async (sql) => {
+      calls.push(sql);
+      if (sql.includes('websearch_to_tsquery')) {
+        return { rows: [{ id: 'fts', name: 'Hit FTS' }] };
+      }
+      if (sql.includes('ILIKE')) {
+        return { rows: [{ id: 'like', name: 'Hit ILIKE' }] };
+      }
+      return { rows: [] };
+    },
+  };
+  const rows = await new VaultService(client, null).searchNodes('teste', undefined, 5);
+  assert.equal(rows.length, 2);
+  assert.ok(calls.some((sql) => sql.includes('ts_rank_cd')));
 });
 
 test('diagnosis collects whitelisted state without secrets', async () => {

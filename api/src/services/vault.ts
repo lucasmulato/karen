@@ -188,6 +188,27 @@ export class VaultService {
     return res.rows;
   }
 
+  /** PostgreSQL full-text search with Portuguese stemming and rank. */
+  private async fullTextSearch(
+    query: string,
+    type: string | undefined,
+    limit: number
+  ): Promise<NodeRow[]> {
+    const params: unknown[] = [query];
+    let sql =
+      `SELECT ${NODE_COLUMNS}, ` +
+      `ts_rank_cd(search_tsv, websearch_to_tsquery('portuguese', $1)) AS rank ` +
+      `FROM nodes WHERE search_tsv @@ websearch_to_tsquery('portuguese', $1)`;
+    if (type) {
+      params.push(type);
+      sql += ` AND type = $2`;
+    }
+    sql += ` ORDER BY rank DESC LIMIT $${params.length + 1}`;
+    params.push(limit);
+    const res = await this.client.query(sql, params);
+    return res.rows;
+  }
+
   private async semanticSearch(
     vector: number[],
     type: string | undefined,
@@ -208,21 +229,31 @@ export class VaultService {
 
   /** Search only the ingested security knowledge base. */
   async searchKb(query: string, limit = 10): Promise<NodeRow[]> {
+    const capped = Math.min(Math.trunc(limit) || 10, 30);
+    try {
+      const res = await this.client.query(
+        `SELECT ${NODE_COLUMNS} FROM nodes
+          WHERE source LIKE 'kb:%'
+            AND search_tsv @@ websearch_to_tsquery('portuguese', $1)
+          ORDER BY ts_rank_cd(search_tsv, websearch_to_tsquery('portuguese', $1)) DESC
+          LIMIT $2`,
+        [query, capped]
+      );
+      if (res.rows.length) return res.rows;
+    } catch {
+      // FTS is optional — fall through to lexical matching.
+    }
     const res = await this.client.query(
       `SELECT ${NODE_COLUMNS} FROM nodes
         WHERE source LIKE 'kb:%' AND (name ILIKE $1 OR description ILIKE $1)
         ORDER BY name LIMIT $2`,
-      [`%${query}%`, Math.min(Math.trunc(limit) || 10, 30)]
+      [`%${query}%`, capped]
     );
     return res.rows;
   }
 
   /** Reciprocal rank fusion keeps both lexical and semantic hits. */
-  private rrfMerge(
-    keyword: NodeRow[],
-    semantic: NodeRow[],
-    limit: number
-  ): NodeRow[] {
+  private rrfMerge(limit: number, ...rankings: NodeRow[][]): NodeRow[] {
     const scores = new Map<string, number>();
     const byId = new Map<string, NodeRow>();
     const k = 60;
@@ -232,8 +263,7 @@ export class VaultService {
         scores.set(row.id, (scores.get(row.id) ?? 0) + 1 / (k + index + 1));
       });
     };
-    add(keyword);
-    add(semantic);
+    for (const rows of rankings) add(rows);
     return [...scores.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit)
@@ -263,14 +293,20 @@ export class VaultService {
     }
 
     const keyword = await this.keywordSearch(query, type, limit);
-    if (!this.embeddings) return keyword;
+    let fulltext: NodeRow[] = [];
+    try {
+      fulltext = await this.fullTextSearch(query, type, limit);
+    } catch (err: any) {
+      console.error("Full-text search failed, using ILIKE only:", err.message);
+    }
+    if (!this.embeddings) return this.rrfMerge(limit, keyword, fulltext);
     try {
       const vector = await this.embeddings.embedOne(query);
       const semantic = await this.semanticSearch(vector, type, limit);
-      return this.rrfMerge(keyword, semantic, limit);
+      return this.rrfMerge(limit, keyword, fulltext, semantic);
     } catch (err: any) {
-      console.error("Semantic search failed, using keyword only:", err.message);
-      return keyword;
+      console.error("Semantic search failed, using lexical only:", err.message);
+      return this.rrfMerge(limit, keyword, fulltext);
     }
   }
 

@@ -17,8 +17,14 @@ CREATE TABLE IF NOT EXISTS nodes (
     embedding_model TEXT,
     embedding_updated_at TIMESTAMP WITH TIME ZONE,
     content_hash TEXT,
-    source TEXT
+    source TEXT,
+    -- Full-text search with Portuguese stemming; maintained by PostgreSQL.
+    search_tsv tsvector GENERATED ALWAYS AS (
+        setweight(to_tsvector('portuguese', COALESCE(name, '')), 'A') ||
+        setweight(to_tsvector('portuguese', COALESCE(description, '')), 'B')
+    ) STORED
 );
+CREATE INDEX IF NOT EXISTS idx_nodes_search_tsv ON nodes USING GIN (search_tsv);
 
 -- 2. Edges Table: Stores relationships
 CREATE TABLE IF NOT EXISTS edges (
