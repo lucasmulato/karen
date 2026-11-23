@@ -24,11 +24,7 @@ leads or running allowlisted operational commands.
 
 ## Private demo
 
-A running instance is available at **https://karen.164.68.109.252.sslip.io/**
-(free wildcard DNS, Let's Encrypt TLS). The root is a public landing page; the
-assistant lives at `/app/` behind a **session login** (user `karen`). Client
-proposals are public only via unguessable `/portal/<token>` links. Personal
-instance — please do not probe or abuse it.
+Demo privada sob pedido.
 
 ## Architecture
 
