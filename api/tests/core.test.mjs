@@ -11,6 +11,7 @@ import { VaultService } from "../build/services/vault.js";
 import { formatBrief } from "../build/services/brief.js";
 import { pickSuggestions, memoryDraft } from "../scripts/lib/vault-garden.mjs";
 import { findSecrets } from "../scripts/lib/secret-scan.mjs";
+import { extractEntities } from "../scripts/lib/entities.mjs";
 import {
   hardPolicy,
   parseModelOutput,
@@ -184,6 +185,15 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.equal(merged[1].policy, 'auto');
   assert.equal(merged[2].policy, 'propose');
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
+});
+
+test('entity extraction deduplicates CVEs and known tools', () => {
+  const found = extractEntities(
+    'Veja CVE-2026-1234 e CVE-2026-1234 em OWASP e Nmap com nmap.',
+    ['OWASP', 'Nmap', 'Burp Suite']
+  );
+  assert.deepEqual(found.cves, ['CVE-2026-1234']);
+  assert.deepEqual(found.tools, ['OWASP', 'Nmap']);
 });
 
 test('secret scan reports pattern and line without leaking the value', () => {

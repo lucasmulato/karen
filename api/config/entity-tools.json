@@ -1,0 +1,15 @@
+{
+  "tools": [
+    "OWASP",
+    "MITRE ATT&CK",
+    "Burp Suite",
+    "Nmap",
+    "Metasploit",
+    "OpenResty",
+    "PostgreSQL",
+    "llama.cpp",
+    "KAREN",
+    "NVD",
+    "PortSwigger"
+  ]
+}
