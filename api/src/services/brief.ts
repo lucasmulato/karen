@@ -32,6 +32,16 @@ export interface BriefReport {
   stale_decisions: { path: string; days: number }[];
   outreach_ready: number;
   hygiene_proposals: number;
+  changes: {
+    generated_at: string;
+    nodes_added: number;
+    nodes_removed: number;
+    nodes_changed: number;
+    edges_added: number;
+    edges_removed: number;
+    first_run: boolean;
+  } | null;
+  auth: { total_failures: number; suspicious_ips: number; top_ip: string | null } | null;
   watch: {
     opportunity_age_days: number | null;
     stale_opportunities: boolean;
@@ -84,7 +94,7 @@ export class BriefService {
   ) {}
 
   async build(): Promise<BriefReport> {
-    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport, outreach, hygiene] = await Promise.all([
+    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport, outreach, hygiene, diff, authReport] = await Promise.all([
       new QueueService(this.client).items().catch(() => []),
       readJson(`${DATA}/credit-recommendations.json`),
       readJson(process.env.KAREN_TRIAGE_JSON ?? `${DATA}/eva-triage.json`),
@@ -99,6 +109,8 @@ export class BriefService {
       readJson(`${DATA}/knowledge-sync.json`),
       new OutreachService(this.client).items().then((items) => items.filter((i) => i.status === "ready").length).catch(() => 0),
       readJson(`${DATA}/knowledge-hygiene.json`),
+      readJson(`${DATA}/state-diff.json`),
+      readJson(`${DATA}/auth-correlation.json`),
     ]);
 
     const needsYou = queue
@@ -153,6 +165,31 @@ export class BriefService {
     if (hygieneCount > 0) {
       steps.push(`${hygieneCount} proposta(s) de higiene — revisar e aplicar com apply-proposals.mjs --approve`);
     }
+    const changes = diff
+      ? {
+          generated_at: String(diff.generated_at ?? ""),
+          nodes_added: (diff.nodes_added ?? []).length,
+          nodes_removed: (diff.nodes_removed ?? []).length,
+          nodes_changed: (diff.nodes_changed ?? []).length,
+          edges_added: Number(diff.edges_added ?? 0),
+          edges_removed: Number(diff.edges_removed ?? 0),
+          first_run: Boolean(diff.first_run),
+        }
+      : null;
+    if (changes && !changes.first_run) {
+      const total = changes.nodes_added + changes.nodes_removed + changes.nodes_changed + changes.edges_added + changes.edges_removed;
+      if (total > 0) steps.push(`${total} alteração(ões) no grafo desde o último snapshot`);
+    }
+    const auth = authReport
+      ? {
+          total_failures: Number(authReport.total_failures ?? 0),
+          suspicious_ips: (authReport.suspicious_ips ?? []).length,
+          top_ip: authReport.suspicious_ips?.[0]?.ip ?? null,
+        }
+      : null;
+    if (auth && auth.suspicious_ips > 0) {
+      steps.push(`${auth.suspicious_ips} IP(s) com 10+ falhas SSH em 24h — revisar auth-correlation.json`);
+    }
 
     const watch = {
       opportunity_age_days: opportunityAge,
@@ -180,6 +217,8 @@ export class BriefService {
       stale_decisions: staleDecisions,
       outreach_ready: outreach,
       hygiene_proposals: hygieneCount,
+      changes,
+      auth,
       watch,
       health: diag ? formatDiagnosis(diag) : "Diagnóstico indisponível.",
       decisions,
@@ -217,6 +256,15 @@ export function formatBrief(brief: BriefReport): string {
     ...(brief.stale_decisions.length
       ? brief.stale_decisions.map((d) => `- ${d.days}d sem desfecho: ${d.path}`)
       : []),
+    "",
+    "🔄 DESDE ONTEM",
+    brief.changes && !brief.changes.first_run
+      ? `- +${brief.changes.nodes_added} -${brief.changes.nodes_removed} ~${brief.changes.nodes_changed} nós · +${brief.changes.edges_added} -${brief.changes.edges_removed} arestas`
+      : "- Primeiro snapshot — sem comparação ainda.",
+    "🛡️ AUTH",
+    brief.auth
+      ? `- ${brief.auth.total_failures} falhas SSH · ${brief.auth.suspicious_ips} IP(s) suspeito(s)${brief.auth.top_ip ? ` · top: ${brief.auth.top_ip}` : ""}`
+      : "- Sem dados de auth.",
     "",
     "👀 VIGILÂNCIA",
     `- Oportunidades: ${brief.watch.opportunity_age_days ?? "?"}d ${brief.watch.stale_opportunities ? "(REVALIDAR)" : ""}`,

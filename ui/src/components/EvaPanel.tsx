@@ -118,6 +118,14 @@ const EvaPanel: React.FC = () => {
                   </p>
                 ))}
                 <p className="text-[11px] text-zinc-600">
+                  Desde ontem: {brief.changes?.first_run ? 'primeiro snapshot' : `+${brief.changes?.nodes_added ?? 0} -${brief.changes?.nodes_removed ?? 0} ~${brief.changes?.nodes_changed ?? 0} nós`}
+                </p>
+                {(brief.auth?.suspicious_ips ?? 0) > 0 && (
+                  <p className="text-[11px] text-amber-400/90">
+                    🛡️ {brief.auth.total_failures} falhas SSH · {brief.auth.suspicious_ips} IP(s) suspeito(s) · top {brief.auth.top_ip}
+                  </p>
+                )}
+                <p className="text-[11px] text-zinc-600">
                   Vigilância: {brief.watch?.leads_without_draft ?? 0} leads sem firstTouch · {brief.outreach_ready ?? 0} mensagens prontas · {brief.hygiene_proposals ?? 0} propostas de higiene · {brief.watch?.sync ?? '—'}
                 </p>
                 <ul className="list-decimal space-y-0.5 pl-4 text-[11px] text-zinc-400">

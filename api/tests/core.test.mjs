@@ -252,6 +252,8 @@ test('EVA brief renders pending decisions and next steps', () => {
     stale_decisions: [{ path: 'decisions/2026-11-01-x.md', days: 22 }],
     outreach_ready: 3,
     hygiene_proposals: 7,
+    changes: { generated_at: '2026-11-23T00:00:00Z', nodes_added: 2, nodes_removed: 0, nodes_changed: 1, edges_added: 3, edges_removed: 0, first_run: false },
+    auth: { total_failures: 8000, suspicious_ips: 3, top_ip: '203.0.113.9' },
     watch: { opportunity_age_days: 9, stale_opportunities: true, leads_without_draft: 2, sync: '1 embeddings' },
     health: 'API active',
     decisions: [],
@@ -265,6 +267,8 @@ test('EVA brief renders pending decisions and next steps', () => {
   assert.ok(text.includes('Leads sem firstTouch: 2'));
   assert.ok(text.includes('Mensagens prontas (envio manual): 3'));
   assert.ok(text.includes('Propostas de higiene pendentes: 7'));
+  assert.ok(text.includes('+2 -0 ~1 nós'));
+  assert.ok(text.includes('3 IP(s) suspeito(s) · top: 203.0.113.9'));
   assert.ok(text.includes('API active'));
 });
 
