@@ -220,6 +220,8 @@ test('EVA brief renders pending decisions and next steps', () => {
     handled: 2,
     opportunities: [{ title: 'Oferta X', score: 4, needs: ['seguranca'] }],
     garden: { orphans: 8, with_candidates: 6, draft_lines: 1 },
+    deadlines: [{ note: 'projeto.md', date: '2026-12-01', days_left: 8 }],
+    stale_decisions: [{ path: 'decisions/2026-11-01-x.md', days: 22 }],
     health: 'API active',
     decisions: [],
     next_steps: ['Revisar bloqueios'],
@@ -227,6 +229,8 @@ test('EVA brief renders pending decisions and next steps', () => {
   assert.ok(text.includes('EVA — BRIEF DE 2026-11-23'));
   assert.ok(text.includes('[blocked/critical] Aprovar reload'));
   assert.ok(text.includes('1. Revisar bloqueios'));
+  assert.ok(text.includes('projeto.md em 8d') || text.includes('2026-12-01'));
+  assert.ok(text.includes('22d sem desfecho'));
   assert.ok(text.includes('API active'));
 });
 

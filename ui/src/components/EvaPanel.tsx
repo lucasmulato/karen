@@ -107,6 +107,16 @@ const EvaPanel: React.FC = () => {
                 <p className="text-[11px] text-zinc-500">
                   Jardim: {brief.garden?.orphans ?? 0} órfãs · {brief.garden?.with_candidates ?? 0} sugestões (nada aplicado).
                 </p>
+                {(brief.deadlines ?? []).map((d: any, i: number) => (
+                  <p key={`d${i}`} className="text-[11px] text-zinc-400">
+                    📅 <span className="text-blue-300">{d.date}</span> · {d.days_left}d · {d.note}
+                  </p>
+                ))}
+                {(brief.stale_decisions ?? []).map((d: any, i: number) => (
+                  <p key={`s${i}`} className="text-[11px] text-amber-400/80">
+                    {d.days}d sem desfecho: {d.path}
+                  </p>
+                ))}
                 <ul className="list-decimal space-y-0.5 pl-4 text-[11px] text-zinc-400">
                   {(brief.next_steps ?? []).map((step: string, i: number) => <li key={i}>{step}</li>)}
                 </ul>
