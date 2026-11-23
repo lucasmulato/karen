@@ -222,6 +222,7 @@ test('EVA brief renders pending decisions and next steps', () => {
     garden: { orphans: 8, with_candidates: 6, draft_lines: 1 },
     deadlines: [{ note: 'projeto.md', date: '2026-12-01', days_left: 8 }],
     stale_decisions: [{ path: 'decisions/2026-11-01-x.md', days: 22 }],
+    watch: { opportunity_age_days: 9, stale_opportunities: true, leads_without_draft: 2, sync: '1 embeddings' },
     health: 'API active',
     decisions: [],
     next_steps: ['Revisar bloqueios'],
@@ -231,6 +232,7 @@ test('EVA brief renders pending decisions and next steps', () => {
   assert.ok(text.includes('1. Revisar bloqueios'));
   assert.ok(text.includes('projeto.md em 8d') || text.includes('2026-12-01'));
   assert.ok(text.includes('22d sem desfecho'));
+  assert.ok(text.includes('Leads sem firstTouch: 2'));
   assert.ok(text.includes('API active'));
 });
 

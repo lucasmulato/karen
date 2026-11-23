@@ -29,6 +29,12 @@ export interface BriefReport {
   garden: { orphans: number; with_candidates: number; draft_lines: number };
   deadlines: { note: string; date: string; days_left: number }[];
   stale_decisions: { path: string; days: number }[];
+  watch: {
+    opportunity_age_days: number | null;
+    stale_opportunities: boolean;
+    leads_without_draft: number;
+    sync: string;
+  };
   health: string;
   decisions: { path: string; text: string }[];
   next_steps: string[];
@@ -75,7 +81,7 @@ export class BriefService {
   ) {}
 
   async build(): Promise<BriefReport> {
-    const [queue, credits, triage, garden, decisions, diag, deadlines] = await Promise.all([
+    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport] = await Promise.all([
       new QueueService(this.client).items().catch(() => []),
       readJson(`${DATA}/credit-recommendations.json`),
       readJson(process.env.KAREN_TRIAGE_JSON ?? `${DATA}/eva-triage.json`),
@@ -83,6 +89,11 @@ export class BriefService {
       this.notes.decisions(5).catch(() => []),
       this.diagnosis ? this.diagnosis.report().catch(() => null) : Promise.resolve(null),
       collectDeadlines(this.notes).catch(() => []),
+      this.client
+        .query("SELECT COUNT(*)::int AS n FROM leads WHERE draft->>'firstTouch' IS NULL OR draft->>'firstTouch' = ''")
+        .then((r) => r.rows[0]?.n ?? 0)
+        .catch(() => 0),
+      readJson(`${DATA}/knowledge-sync.json`),
     ]);
 
     const needsYou = queue
@@ -122,6 +133,23 @@ export class BriefService {
     }
     if (!steps.length) steps.push("Sem ações urgentes — silêncio produtivo.");
 
+    const opportunityAge = credits?.date
+      ? Math.floor((Date.now() - Date.parse(credits.date)) / 86_400_000)
+      : null;
+    const staleOpportunities = opportunityAge !== null && opportunityAge > 7;
+    if (staleOpportunities) steps.push(`Relatório de oportunidades com ${opportunityAge}d — revalidar em fonte oficial`);
+    const leadsWithoutDraft = Number(leadRows ?? 0);
+    if (leadsWithoutDraft > 0) steps.push(`${leadsWithoutDraft} lead(s) sem firstTouch — pré-redigir`);
+
+    const watch = {
+      opportunity_age_days: opportunityAge,
+      stale_opportunities: staleOpportunities,
+      leads_without_draft: leadsWithoutDraft,
+      sync: syncReport
+        ? `${syncReport.embedded ?? 0} embeddings · ${syncReport.entities?.cves?.length ?? 0} CVE(s) · ${syncReport.entities?.tools?.length ?? 0} tool(s)`
+        : "sem registro de sync",
+    };
+
     const now = new Date();
     return {
       generated_at: now.toISOString(),
@@ -137,6 +165,7 @@ export class BriefService {
       },
       deadlines,
       stale_decisions: staleDecisions,
+      watch,
       health: diag ? formatDiagnosis(diag) : "Diagnóstico indisponível.",
       decisions,
       next_steps: steps,
@@ -173,6 +202,11 @@ export function formatBrief(brief: BriefReport): string {
     ...(brief.stale_decisions.length
       ? brief.stale_decisions.map((d) => `- ${d.days}d sem desfecho: ${d.path}`)
       : []),
+    "",
+    "👀 VIGILÂNCIA",
+    `- Oportunidades: ${brief.watch.opportunity_age_days ?? "?"}d ${brief.watch.stale_opportunities ? "(REVALIDAR)" : ""}`,
+    `- Leads sem firstTouch: ${brief.watch.leads_without_draft}`,
+    `- Sync: ${brief.watch.sync}`,
     "",
     "⚖️ PRÓXIMO PASSO",
     ...brief.next_steps.map((step, i) => `${i + 1}. ${step}`),
