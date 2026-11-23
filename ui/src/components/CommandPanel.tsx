@@ -6,6 +6,7 @@ interface Definition {
   label: string;
   description: string;
   risk: 'read' | 'write';
+  policy: 'auto' | 'propose' | 'blocked';
   preview: string;
 }
 
@@ -193,6 +194,9 @@ const CommandPanel: React.FC = () => {
                 <span className="flex items-center gap-1.5 text-xs text-zinc-200">
                   <span className={`h-1.5 w-1.5 rounded-full ${def.risk === 'write' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                   {def.label}
+                  <span className={`ml-auto text-[9px] uppercase tracking-wider ${
+                    def.policy === 'auto' ? 'text-emerald-500' : def.policy === 'blocked' ? 'text-red-400' : 'text-amber-400'
+                  }`}>{def.policy}</span>
                 </span>
                 <span className="text-[11px] text-zinc-500 truncate w-full">{def.description}</span>
               </button>

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { parseFrontmatter, parseLinks, slug } from "../build/services/notelinks.js";
-import { COMMANDS } from "../build/services/commands.js";
+import { COMMANDS, policyFor } from "../build/services/commands.js";
 import { draftFor } from "../build/templates/outreach.js";
 import { CanvasService } from "../build/services/canvas.js";
 import { DashboardService } from "../build/services/dashboard.js";
@@ -31,6 +31,14 @@ test("frontmatter and wikilinks parse correctly", () => {
     "Jardim Digital",
   ]);
   assert.equal(slug("Método Zettelkasten"), "metodo-zettelkasten");
+});
+
+test('command policy maps read to auto and high-stakes writes to blocked', () => {
+  assert.equal(policyFor({ id: 'health', risk: 'read' }), 'auto');
+  assert.equal(policyFor({ id: 'build_ui', risk: 'write' }), 'propose');
+  assert.equal(policyFor({ id: 'restart_api', risk: 'write' }), 'blocked');
+  assert.equal(policyFor({ id: 'reload_web', risk: 'write' }), 'blocked');
+  assert.ok(COMMANDS.every((c) => ['auto', 'propose', 'blocked'].includes(policyFor(c))));
 });
 
 test("command allowlist is safe and unique", () => {

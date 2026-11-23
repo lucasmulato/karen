@@ -11,6 +11,15 @@ import { createHash, randomBytes } from "node:crypto";
 import type { Client } from "pg";
 
 export type Risk = "read" | "write";
+export type Policy = "auto" | "propose" | "blocked";
+
+/** Commands that interrupt the public service or the API itself need extra scrutiny. */
+const BLOCKED_COMMANDS = new Set(["restart_api", "reload_web"]);
+
+export function policyFor(command: { id: string; risk: Risk }): Policy {
+  if (command.risk === "read") return "auto";
+  return BLOCKED_COMMANDS.has(command.id) ? "blocked" : "propose";
+}
 export type RunStatus = "pending" | "running" | "ok" | "error" | "denied";
 export type Decision = "pending" | "auto" | "approved" | "denied";
 
@@ -162,6 +171,7 @@ export interface CommandInfo {
   label: string;
   description: string;
   risk: Risk;
+  policy: Policy;
   preview: string;
 }
 
@@ -250,6 +260,7 @@ export class CommandService {
       label: c.label,
       description: c.description,
       risk: c.risk,
+      policy: policyFor(c),
       preview: previewOf(c),
     }));
   }
