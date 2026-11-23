@@ -93,6 +93,31 @@ Preview without sending:
 `node scripts/send-morning-report.mjs --evening --dry-run` and
 `node scripts/send-alert.mjs --urgent --dry-run` (from `api/`).
 
+## llama.cpp tuning
+
+Measured on this VPS (6 cores, no GPU, Qwen3-4B Q4_K_M) with
+`node scripts/llama-bench.mjs --label <name>` from `api/`. The script performs a
+warm-up call then N identical calls with a fixed ~470-token prompt and records
+llama.cpp's own `timings` plus server RSS into `api/data/llama-bench.jsonl`.
+
+| Config | Prompt tok/s | Gen tok/s | RSS |
+|---|---|---|---|
+| `-c 32768 -t 8` (anterior) | 5,20 | 5,49 | 7.739 MiB |
+| `-c 8192 -t 6` | 0,62 | 0,64 | 5.100 MiB |
+| `-c 8192 -t 8` (**atual**) | 5,17 | 5,27 | 5.338 MiB |
+
+`-t 6` matched the physical core count but collapsed generation ~8× on this
+CPU — probably thread-pool contention. Keep `-t 8`. Reducing the context from
+32k to 8k saved ~2,4 GiB RSS with negligible speed loss. The largest real
+prompt observed in `llama.log` was 5.674 tokens, and agent replies are capped
+at 1.200 tokens, so 8.192 leaves enough headroom.
+
+To re-measure after any change: edit
+`/etc/systemd/system/karen-llama.service`, then
+`sudo systemctl daemon-reload && sudo systemctl restart karen-llama` and run the
+benchmark. Wait for the model to answer (not just `/health`) before measuring.
+The previous unit is kept at `/home/admin/karen-llama.service.bak`.
+
 ## Restore a backup
 
 ```bash
