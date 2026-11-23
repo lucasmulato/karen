@@ -9,6 +9,7 @@ import type { Client } from "pg";
 import type { VaultFsService } from "./vaultfs.js";
 import type { DiagnosisService } from "./diagnosis.js";
 import { QueueService } from "./queue.js";
+import { OutreachService } from "./outreach.js";
 import { formatDiagnosis } from "./diagnosis.js";
 
 const DATA = "/home/admin/karen/api/data";
@@ -29,6 +30,7 @@ export interface BriefReport {
   garden: { orphans: number; with_candidates: number; draft_lines: number };
   deadlines: { note: string; date: string; days_left: number }[];
   stale_decisions: { path: string; days: number }[];
+  outreach_ready: number;
   watch: {
     opportunity_age_days: number | null;
     stale_opportunities: boolean;
@@ -81,7 +83,7 @@ export class BriefService {
   ) {}
 
   async build(): Promise<BriefReport> {
-    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport] = await Promise.all([
+    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport, outreach] = await Promise.all([
       new QueueService(this.client).items().catch(() => []),
       readJson(`${DATA}/credit-recommendations.json`),
       readJson(process.env.KAREN_TRIAGE_JSON ?? `${DATA}/eva-triage.json`),
@@ -94,6 +96,7 @@ export class BriefService {
         .then((r) => r.rows[0]?.n ?? 0)
         .catch(() => 0),
       readJson(`${DATA}/knowledge-sync.json`),
+      new OutreachService(this.client).items().then((items) => items.filter((i) => i.status === "ready").length).catch(() => 0),
     ]);
 
     const needsYou = queue
@@ -140,6 +143,7 @@ export class BriefService {
     if (staleOpportunities) steps.push(`Relatório de oportunidades com ${opportunityAge}d — revalidar em fonte oficial`);
     const leadsWithoutDraft = Number(leadRows ?? 0);
     if (leadsWithoutDraft > 0) steps.push(`${leadsWithoutDraft} lead(s) sem firstTouch — pré-redigir`);
+    if (outreach > 0) steps.push(`${outreach} mensagem(ns) pronta(s) para envio manual no painel Mensagens`);
 
     const watch = {
       opportunity_age_days: opportunityAge,
@@ -165,6 +169,7 @@ export class BriefService {
       },
       deadlines,
       stale_decisions: staleDecisions,
+      outreach_ready: outreach,
       watch,
       health: diag ? formatDiagnosis(diag) : "Diagnóstico indisponível.",
       decisions,
@@ -207,6 +212,7 @@ export function formatBrief(brief: BriefReport): string {
     `- Oportunidades: ${brief.watch.opportunity_age_days ?? "?"}d ${brief.watch.stale_opportunities ? "(REVALIDAR)" : ""}`,
     `- Leads sem firstTouch: ${brief.watch.leads_without_draft}`,
     `- Sync: ${brief.watch.sync}`,
+    `- Mensagens prontas (envio manual): ${brief.outreach_ready}`,
     "",
     "⚖️ PRÓXIMO PASSO",
     ...brief.next_steps.map((step, i) => `${i + 1}. ${step}`),

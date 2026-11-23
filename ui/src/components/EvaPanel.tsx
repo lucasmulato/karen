@@ -118,7 +118,7 @@ const EvaPanel: React.FC = () => {
                   </p>
                 ))}
                 <p className="text-[11px] text-zinc-600">
-                  Vigilância: {brief.watch?.leads_without_draft ?? 0} leads sem firstTouch · {brief.watch?.sync ?? '—'}
+                  Vigilância: {brief.watch?.leads_without_draft ?? 0} leads sem firstTouch · {brief.outreach_ready ?? 0} mensagens prontas · {brief.watch?.sync ?? '—'}
                 </p>
                 <ul className="list-decimal space-y-0.5 pl-4 text-[11px] text-zinc-400">
                   {(brief.next_steps ?? []).map((step: string, i: number) => <li key={i}>{step}</li>)}

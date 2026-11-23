@@ -26,6 +26,7 @@ import { PortalService } from "./services/portal.js";
 import { AuthService } from "./services/auth.js";
 import { DiagnosisService, formatDiagnosis } from "./services/diagnosis.js";
 import { BriefService } from "./services/brief.js";
+import { OutreachService, STATUSES } from "./services/outreach.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -63,6 +64,7 @@ const portal = new PortalService(notes);
 const auth = new AuthService();
 const diagnosis = new DiagnosisService(client);
 const brief = new BriefService(client, notes, diagnosis);
+const outreach = new OutreachService(client);
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -601,6 +603,35 @@ async function handleHttp(
 
     if (req.method === "GET" && path === "/api/eva/brief") {
       sendJson(res, 200, await brief.build());
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/outreach/queue") {
+      const items = await outreach.items();
+      const counts = {
+        ready: items.filter((i) => i.status === "ready").length,
+        copied: items.filter((i) => i.status === "copied").length,
+        sent: items.filter((i) => i.status === "sent").length,
+        dismissed: items.filter((i) => i.status === "dismissed").length,
+      };
+      sendJson(res, 200, { items, counts });
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/outreach/status") {
+      const parsed = z
+        .object({
+          id: z.string().regex(/^[0-9a-f-]{36}$/i),
+          status: z.enum(STATUSES as [string, ...string[]]),
+        })
+        .safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      const item = await outreach.update(parsed.data.id, parsed.data.status as any);
+      if (!item) { sendJson(res, 404, { error: "Mensagem não encontrada" }); return; }
+      sendJson(res, 200, { item });
       return;
     }
 

@@ -12,6 +12,7 @@ import { formatBrief } from "../build/services/brief.js";
 import { pickSuggestions, memoryDraft } from "../scripts/lib/vault-garden.mjs";
 import { findSecrets } from "../scripts/lib/secret-scan.mjs";
 import { extractEntities } from "../scripts/lib/entities.mjs";
+import { normalizePhone, buildWaLink, OutreachService } from "../build/services/outreach.js";
 import {
   hardPolicy,
   parseModelOutput,
@@ -190,6 +191,33 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
 });
 
+test('outreach handoff builds wa.me links without sending or storing the operator number', async () => {
+  // Fake lead phone only — the operator's personal number never enters the repo.
+  assert.equal(normalizePhone('(11) 97777-1234'), '5511977771234');
+  assert.equal(normalizePhone('1133334444'), '551133334444');
+  assert.equal(normalizePhone(null), null);
+  const link = buildWaLink('(11) 97777-1234', 'Oi, tudo bem?');
+  assert.ok(link.startsWith('https://wa.me/5511977771234?text='));
+  assert.ok(link.includes(encodeURIComponent('Oi, tudo bem?')));
+  assert.ok(buildWaLink(null, 'teste').startsWith('https://wa.me/?text='));
+
+  const client = {
+    query: async () => ({
+      rows: [{
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        title: 'Pizzaria Exemplo',
+        phone: null,
+        draft: { firstTouch: 'Oi!', followUp: 'Oi de novo', model: 'vizinho' },
+        created_at: '2026-11-23T00:00:00Z',
+      }],
+    }),
+  };
+  const items = await new OutreachService(client).items();
+  assert.equal(items.length, 1);
+  assert.equal(items[0].status, 'ready');
+  assert.ok(items[0].wa_link.startsWith('https://wa.me/?text='));
+});
+
 test('entity extraction deduplicates CVEs and known tools', () => {
   const found = extractEntities(
     'Veja CVE-2026-1234 e CVE-2026-1234 em OWASP e Nmap com nmap.',
@@ -222,6 +250,7 @@ test('EVA brief renders pending decisions and next steps', () => {
     garden: { orphans: 8, with_candidates: 6, draft_lines: 1 },
     deadlines: [{ note: 'projeto.md', date: '2026-12-01', days_left: 8 }],
     stale_decisions: [{ path: 'decisions/2026-11-01-x.md', days: 22 }],
+    outreach_ready: 3,
     watch: { opportunity_age_days: 9, stale_opportunities: true, leads_without_draft: 2, sync: '1 embeddings' },
     health: 'API active',
     decisions: [],
@@ -233,6 +262,7 @@ test('EVA brief renders pending decisions and next steps', () => {
   assert.ok(text.includes('projeto.md em 8d') || text.includes('2026-12-01'));
   assert.ok(text.includes('22d sem desfecho'));
   assert.ok(text.includes('Leads sem firstTouch: 2'));
+  assert.ok(text.includes('Mensagens prontas (envio manual): 3'));
   assert.ok(text.includes('API active'));
 });
 
