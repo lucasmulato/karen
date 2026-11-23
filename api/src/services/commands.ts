@@ -42,8 +42,6 @@ interface CommandDefinition {
 
 const REPO = "/home/admin/karen";
 const API_DIR = `${REPO}/api`;
-const UI_DIR = `${REPO}/ui`;
-const WEB_ROOT = "/var/www/karen-ui";
 
 /** Fixed, auditable command table. No user/model-supplied strings reach spawn. */
 export const COMMANDS: CommandDefinition[] = [
@@ -154,13 +152,12 @@ export const COMMANDS: CommandDefinition[] = [
   {
     id: "build_ui",
     label: "Build e publicar UI",
-    description: "npm run build e rsync para /var/www/karen-ui.",
+    description: "Test gate + build, backup, swap e rollback automático se o smoke test falhar.",
     risk: "write",
     steps: [
-      { cmd: "/usr/bin/npm", args: ["run", "build"], cwd: UI_DIR },
       {
-        cmd: "/usr/bin/sudo",
-        args: ["/usr/bin/rsync", "-a", "--delete", `${UI_DIR}/dist/`, `${WEB_ROOT}/`],
+        cmd: "/usr/bin/bash",
+        args: [`${API_DIR}/scripts/deploy-ui.sh`],
       },
     ],
   },

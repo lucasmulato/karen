@@ -41,6 +41,9 @@ test('command policy maps read to auto and high-stakes writes to blocked', () =>
   assert.equal(policyFor({ id: 'restart_api', risk: 'write' }), 'blocked');
   assert.equal(policyFor({ id: 'reload_web', risk: 'write' }), 'blocked');
   assert.ok(COMMANDS.every((c) => ['auto', 'propose', 'blocked'].includes(policyFor(c))));
+  const buildUi = COMMANDS.find((c) => c.id === 'build_ui');
+  assert.equal(buildUi.steps[0].cmd, '/usr/bin/bash');
+  assert.ok(buildUi.steps[0].args[0].endsWith('deploy-ui.sh'));
 });
 
 test("command allowlist is safe and unique", () => {
