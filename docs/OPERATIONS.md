@@ -193,6 +193,14 @@ external services beyond the free NVD/OSM/Cloudflare calls already approved.
   vault-garden draft lines via the same append-only path as `remember`. Audited
   in `memory-applied.json`; not mechanically reversible by design.
 
+## Fast path
+
+For routine questions (`quantas notas`, `como você está`, `o que você fez`,
+`aprovações pendentes`, `mensagens prontas`, CVEs, auth), `POST /api/chat` may
+answer from a deterministic fast path (`services/fastpath.ts`) with
+`source: "fastpath"` — no LLM call, sub-second response. Ambiguous or reasoning
+questions fall through to the agent. `/diagnosis` keeps priority.
+
 ## Manual WhatsApp handoff
 
 KAREN prepares messages but never sends them. `GET /api/outreach/queue` lists
