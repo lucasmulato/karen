@@ -6,6 +6,7 @@ import type { CommandService } from "./commands.js";
 import type { VaultFsService } from "./vaultfs.js";
 import type { GardenService } from "./garden.js";
 import { formatDiagnosis, type DiagnosisService } from "./diagnosis.js";
+import { formatBrief, type BriefService } from "./brief.js";
 
 /**
  * Cyber second-brain reasoning layer.
@@ -66,6 +67,15 @@ interface ChatMessage {
 }
 
 const TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "eva_brief",
+      description:
+        "Chief-of-Staff brief for EVA: pending decisions with policy/severity, opportunities, garden health, next steps and deterministic system health. Use when asked for an update, a report about KAREN, or what needs attention.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
   {
     type: "function",
     function: {
@@ -418,7 +428,8 @@ export class GraphAgent {
     private readonly commands?: CommandService | null,
     private readonly notes?: VaultFsService | null,
     private readonly garden?: GardenService | null,
-    private readonly diagnosis?: DiagnosisService | null
+    private readonly diagnosis?: DiagnosisService | null,
+    private readonly brief?: BriefService | null
   ) {}
 
   async chat(message: string): Promise<ChatResult> {
@@ -442,6 +453,7 @@ export class GraphAgent {
       "Use find_leads para buscar prospects (OSM grátis) e redigir mensagens 1:1 (firstTouch sem link, followUp depois). Nunca envie mensagens — o operador copia e envia.",
       "Use request_command apenas com IDs da lista permitida. Comandos de leitura rodam automaticamente; mudanças exigem aprovação do operador no painel de comandos. Nunca invente comandos ou argumentos.",
       "Perguntas sobre o próprio estado da KAREN (saúde, RAM, timers, fila, jardim, backups): use system_status e responda curto, citando os números exatos do texto retornado. Nunca descreva a ferramenta, nunca invente números e NÃO use o formato de 4 seções nesse caso.",
+      "Para pedidos de update, relatório ou 'o que preciso saber': use eva_brief e cite os fatos do texto retornado, com trade-off e próximo passo.",
       "Escopo: bug bounty autorizado, labs, CTF, CA e defesa. Você sugere; o operador executa.",
       "Aplique sempre o formato de 4 seções definido no persona, inclusive em perguntas gerais.",
     ].join("\n");
@@ -498,6 +510,10 @@ export class GraphAgent {
     const args = JSON.parse(call.function.arguments || "{}");
     console.error(`[agent tool] ${call.function.name} ${JSON.stringify(args)}`);
     switch (call.function.name) {
+      case "eva_brief": {
+        if (!this.brief) throw new Error("Brief da EVA indisponível.");
+        return formatBrief(await this.brief.build());
+      }
       case "system_status": {
         if (!this.diagnosis) throw new Error("Diagnóstico indisponível.");
         // Plain text is easier for a 4B model to quote than a large JSON blob.

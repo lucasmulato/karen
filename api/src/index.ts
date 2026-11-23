@@ -25,6 +25,7 @@ import { QueueService } from "./services/queue.js";
 import { PortalService } from "./services/portal.js";
 import { AuthService } from "./services/auth.js";
 import { DiagnosisService, formatDiagnosis } from "./services/diagnosis.js";
+import { BriefService } from "./services/brief.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -61,6 +62,7 @@ const queue = new QueueService(client);
 const portal = new PortalService(notes);
 const auth = new AuthService();
 const diagnosis = new DiagnosisService(client);
+const brief = new BriefService(client, notes, diagnosis);
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -73,7 +75,7 @@ const leads = new LeadService(client, leadProvider, {
 
 // Optional reasoning layer: only constructed when LLM_API_KEY is set.
 const agent = chatConfigFromEnv()
-  ? new GraphAgent(chatConfigFromEnv()!, vault, leads, commands, notes, garden, diagnosis)
+  ? new GraphAgent(chatConfigFromEnv()!, vault, leads, commands, notes, garden, diagnosis, brief)
   : null;
 
 // 3. MCP Server Setup
@@ -594,6 +596,11 @@ async function handleHttp(
 
     if (req.method === "GET" && path === "/api/diagnosis") {
       sendJson(res, 200, await diagnosis.report());
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/eva/brief") {
+      sendJson(res, 200, await brief.build());
       return;
     }
 

@@ -8,6 +8,7 @@ import { CanvasService } from "../build/services/canvas.js";
 import { DashboardService } from "../build/services/dashboard.js";
 import { DiagnosisService, formatDiagnosis } from "../build/services/diagnosis.js";
 import { VaultService } from "../build/services/vault.js";
+import { formatBrief } from "../build/services/brief.js";
 import { pickSuggestions, memoryDraft } from "../scripts/lib/vault-garden.mjs";
 import {
   hardPolicy,
@@ -165,6 +166,25 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.equal(merged[1].policy, 'auto');
   assert.equal(merged[2].policy, 'propose');
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
+});
+
+test('EVA brief renders pending decisions and next steps', () => {
+  const text = formatBrief({
+    generated_at: '2026-11-23T00:00:00Z',
+    date: '2026-11-23',
+    headline: '1 decisão(ões) pendente(s) · 2 tratadas pela EVA · 1 oportunidade(s)',
+    needs_you: [{ title: 'Aprovar reload', detail: 'comando write', policy: 'blocked', severity: 'critical', route: '/app/?pane=commands' }],
+    handled: 2,
+    opportunities: [{ title: 'Oferta X', score: 4, needs: ['seguranca'] }],
+    garden: { orphans: 8, with_candidates: 6, draft_lines: 1 },
+    health: 'API active',
+    decisions: [],
+    next_steps: ['Revisar bloqueios'],
+  });
+  assert.ok(text.includes('EVA — BRIEF DE 2026-11-23'));
+  assert.ok(text.includes('[blocked/critical] Aprovar reload'));
+  assert.ok(text.includes('1. Revisar bloqueios'));
+  assert.ok(text.includes('API active'));
 });
 
 test('vault garden produces suggestions and drafts without mutations', () => {

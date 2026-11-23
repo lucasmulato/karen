@@ -14,6 +14,20 @@ interface Board {
 const EvaPanel: React.FC = () => {
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState('');
+  const [brief, setBrief] = useState<any | null>(null);
+  const [briefBusy, setBriefBusy] = useState(false);
+
+  async function loadBrief() {
+    setBriefBusy(true);
+    try {
+      const res = await fetch(`${API_BASE}/eva/brief`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setBrief(await res.json());
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally { setBriefBusy(false); }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -45,6 +59,9 @@ const EvaPanel: React.FC = () => {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 justify-end border-b border-zinc-900 px-4 py-1.5">
+        <button onClick={loadBrief} disabled={briefBusy} className="flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 disabled:opacity-40" title="Brief da EVA">
+          <Sparkles size={12} /> {briefBusy ? 'Gerando...' : 'Brief'}
+        </button>
         <button onClick={load} className="flex items-center gap-1 text-[11px] text-zinc-500 hover:text-blue-400" title="Atualizar">
           <RefreshCw size={12} /> Atualizar
         </button>
@@ -75,6 +92,26 @@ const EvaPanel: React.FC = () => {
                 Contexto ativo: <span className="text-blue-400">{board.context}</span>
               </p>
             </section>
+
+            {brief && (
+              <section className="space-y-2 rounded-lg border border-emerald-900/60 bg-emerald-950/20 p-3">
+                <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-emerald-400">
+                  <Sparkles size={12} /> Brief · {brief.date}
+                </p>
+                <p className="text-xs text-zinc-200">{brief.headline}</p>
+                {(brief.needs_you ?? []).map((item: any, i: number) => (
+                  <p key={i} className="text-[11px] text-zinc-400">
+                    <span className="text-amber-400">[{item.policy}/{item.severity}]</span> {item.title}
+                  </p>
+                ))}
+                <p className="text-[11px] text-zinc-500">
+                  Jardim: {brief.garden?.orphans ?? 0} órfãs · {brief.garden?.with_candidates ?? 0} sugestões (nada aplicado).
+                </p>
+                <ul className="list-decimal space-y-0.5 pl-4 text-[11px] text-zinc-400">
+                  {(brief.next_steps ?? []).map((step: string, i: number) => <li key={i}>{step}</li>)}
+                </ul>
+              </section>
+            )}
 
             <section className="space-y-2">
               <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
