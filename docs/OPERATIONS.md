@@ -76,6 +76,7 @@ curl -s http://127.0.0.1:3000/api/health/full
 | `karen-audit` | Monday 08:30 | npm audit report |
 | `karen-eva-weekly` | Monday 10:00 | EVA strategy-review e-mail |
 | `karen-eva-triage` | daily 23:30 | EVA classifies queue items (`auto` / `propose` / `blocked`) |
+| `karen-vault-garden` | daily 05:00 | orphan backlink suggestions + MEMORY.md draft (never applies) |
 
 Run one manually: `sudo systemctl start <name>.service`. Logs:
 `journalctl -u <name>.service -n 50`.
@@ -92,6 +93,43 @@ only *detects* findings, and a **new or changed** finding triggers
 Preview without sending:
 `node scripts/send-morning-report.mjs --evening --dry-run` and
 `node scripts/send-alert.mjs --urgent --dry-run` (from `api/`).
+
+## Search: FTS + RRF
+
+`nodes.search_tsv` is a generated `tsvector` (Portuguese stemming, name weighted
+`A`, description `B`) with a GIN index, declared in `scripts/schema.sql`.
+`VaultService.searchNodes` fuses **ILIKE + PostgreSQL FTS + pgvector** results
+with reciprocal rank fusion; any failing source degrades gracefully. `search_kb`
+uses FTS first and falls back to ILIKE. This means a query such as `seguranca`
+matches accented notes that a raw `ILIKE '%seguranca%'` would miss.
+
+Embeddings are Cloudflare Workers AI `@cf/baai/bge-m3` (1024 dims), configured
+via `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` in `karen.env`. The free
+Workers allocation (10,000 Neurons/day) covers the 7,573-node backfill and
+ongoing queries. Backfill: `POST /api/embeddings/backfill` (repeat until it
+indexes 0 — the endpoint processes at most 500 nodes per call).
+
+## Vault garden (read-only maintenance)
+
+`api/scripts/vault-garden.mjs` runs daily. It finds orphan graph notes, suggests
+backlinks from the existing embeddings (cosine similarity, threshold 0.55) and
+drafts MEMORY.md lines from recent decisions not yet in memory. It writes only
+`api/data/vault-maintenance.json` — **nothing is applied automatically**, and
+MEMORY.md remains append-only via `remember`. The digest reports the counts.
+
+Manual run: `node scripts/vault-garden.mjs --dry-run` from `api/`.
+
+## EVA brief
+
+`GET /api/eva/brief` returns a deterministic Chief-of-Staff brief: pending
+decisions with policy/severity, opportunities with trade-offs, garden status,
+next steps and the deterministic health report. The **Brief** button in the EVA
+panel renders it; the agent exposes it as the `eva_brief` tool. As with
+`system_status`, the model only narrates — it never supplies the numbers.
+
+Command policies are now explicit: `GET /api/commands` includes `policy`
+(`auto` for reads, `propose` for reversible writes, `blocked` for
+`restart_api` / `reload_web`), and the command panel shows the badge.
 
 ## llama.cpp tuning
 
