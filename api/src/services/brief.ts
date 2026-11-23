@@ -32,6 +32,7 @@ export interface BriefReport {
   stale_decisions: { path: string; days: number }[];
   outreach_ready: number;
   hygiene_proposals: number;
+  applied: { proposals: number; backlinks: number };
   changes: {
     generated_at: string;
     nodes_added: number;
@@ -94,7 +95,7 @@ export class BriefService {
   ) {}
 
   async build(): Promise<BriefReport> {
-    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport, outreach, hygiene, diff, authReport] = await Promise.all([
+    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport, outreach, hygiene, diff, authReport, proposalAudit, backlinkAudit] = await Promise.all([
       new QueueService(this.client).items().catch(() => []),
       readJson(`${DATA}/credit-recommendations.json`),
       readJson(process.env.KAREN_TRIAGE_JSON ?? `${DATA}/eva-triage.json`),
@@ -111,6 +112,8 @@ export class BriefService {
       readJson(`${DATA}/knowledge-hygiene.json`),
       readJson(`${DATA}/state-diff.json`),
       readJson(`${DATA}/auth-correlation.json`),
+      readJson(`${DATA}/proposals-applied.json`),
+      readJson(`${DATA}/backlinks-applied.json`),
     ]);
 
     const needsYou = queue
@@ -162,8 +165,13 @@ export class BriefService {
       (sum: number, list: unknown) => sum + (Array.isArray(list) ? list.length : 0),
       0
     );
-    if (hygieneCount > 0) {
-      steps.push(`${hygieneCount} proposta(s) de higiene — revisar e aplicar com apply-proposals.mjs --approve`);
+    const applied = {
+      proposals: Number(proposalAudit?.count ?? 0),
+      backlinks: Number(backlinkAudit?.count ?? 0),
+    };
+    const pendingHygiene = Math.max(0, hygieneCount - applied.proposals);
+    if (pendingHygiene > 0) {
+      steps.push(`${pendingHygiene} proposta(s) de higiene — revisar e aplicar com apply-proposals.mjs --approve`);
     }
     const changes = diff
       ? {
@@ -216,7 +224,8 @@ export class BriefService {
       deadlines,
       stale_decisions: staleDecisions,
       outreach_ready: outreach,
-      hygiene_proposals: hygieneCount,
+      hygiene_proposals: pendingHygiene,
+      applied,
       changes,
       auth,
       watch,
@@ -271,7 +280,8 @@ export function formatBrief(brief: BriefReport): string {
     `- Leads sem firstTouch: ${brief.watch.leads_without_draft}`,
     `- Sync: ${brief.watch.sync}`,
     `- Mensagens prontas (envio manual): ${brief.outreach_ready}`,
-    `- Propostas de higiene pendentes: ${brief.hygiene_proposals}`,
+    `- Propostas de higiene pendentes: ${brief.hygiene_proposals} (aplicadas: ${brief.applied.proposals})`,
+    `- Backlinks aplicados com auditoria: ${brief.applied.backlinks}`,
     "",
     "⚖️ PRÓXIMO PASSO",
     ...brief.next_steps.map((step, i) => `${i + 1}. ${step}`),
