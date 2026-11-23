@@ -96,6 +96,15 @@ test("canvas export produces valid JSON Canvas 1.0 shape", async () => {
   assert.equal(canvas.edges[0].toEnd, "arrow");
 });
 
+test("dashboard attention mirrors queue policies and hides auto items", async () => {
+  const client = { query: async () => ({ rows: [] }) };
+  const notes = { decisions: async () => [] };
+  const att = await new DashboardService(client, notes).attention();
+  assert.ok(Array.isArray(att.items));
+  assert.ok(att.items.every((item) => !item.detail.startsWith('[auto/')));
+  assert.equal(att.total, att.items.length);
+});
+
 test("dashboard activity mixes sources", async () => {
   const client = {
     query: async () => ({
