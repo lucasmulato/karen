@@ -14,6 +14,8 @@ import { findSecrets } from "../scripts/lib/secret-scan.mjs";
 import { extractEntities } from "../scripts/lib/entities.mjs";
 import { normalizePhone, buildWaLink, OutreachService } from "../build/services/outreach.js";
 import { autoResolvable, summarizeResolutions } from "../scripts/lib/auto-resolve.mjs";
+import { hasMutationIntent, isMutatingTool } from "../build/services/agent-guard.js";
+import { redactSecrets } from "../build/services/redact.js";
 import {
   hardPolicy,
   parseModelOutput,
@@ -190,6 +192,23 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.equal(merged[1].policy, 'auto');
   assert.equal(merged[2].policy, 'propose');
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
+});
+
+test('agent blocks mutating tools unless the operator explicitly asks', () => {
+  assert.equal(isMutatingTool('write_note'), true);
+  assert.equal(isMutatingTool('remember'), true);
+  assert.equal(isMutatingTool('decision_log'), true);
+  assert.equal(isMutatingTool('search_kb'), false);
+  assert.equal(hasMutationIntent('O que você sabe sobre SSRF?'), false);
+  assert.equal(hasMutationIntent('Registre esta decisão no vault'), true);
+  assert.equal(hasMutationIntent('Anote que o prazo é 15/12'), true);
+});
+
+test('embeddings redact credential-shaped text before sending it', () => {
+  const out = redactSecrets('use cfat_abcdefghijklmnopqrst e password=supersecretvalue1234567890');
+  assert.ok(out.includes('[REDACTED]'));
+  assert.ok(!out.includes('cfat_abcdefghijklmnopqrst'));
+  assert.ok(!out.includes('supersecretvalue1234567890'));
 });
 
 test('auto-resolve only closes informational items and audits them', () => {

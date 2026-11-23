@@ -11,7 +11,8 @@ import { findSecrets } from "./lib/secret-scan.mjs";
 
 const REPORT = resolve("/home/admin/karen/api/data/secret-scan.json");
 const ROOTS = [
-  { path: "/home/admin/karen", skip: ["node_modules", ".git", "build", "dist", "data"] },
+  // tests/ contains deliberate fake tokens for the scanner's own unit tests.
+  { path: "/home/admin/karen", skip: ["node_modules", ".git", "build", "dist", "data", "tests"] },
   { path: "/home/admin/models/karen-vault", skip: [".git"] },
 ];
 const EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".json", ".md", ".sh", ".sql", ".env", ".example"]);

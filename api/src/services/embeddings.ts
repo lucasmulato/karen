@@ -1,3 +1,5 @@
+import { redactSecrets } from "./redact.js";
+
 /**
  * Cloudflare Workers AI embeddings — free tier, zero data retention.
  *
@@ -49,13 +51,15 @@ export class EmbeddingService {
 
   async embed(inputs: string[]): Promise<number[][]> {
     if (inputs.length === 0) return [];
+    // Never send credential-shaped text to an external provider.
+    const safeInputs = inputs.map((input) => redactSecrets(input));
     const res = await fetch(`${this.config.baseUrl}/embeddings`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.config.apiKey}`,
       },
-      body: JSON.stringify({ model: this.config.model, input: inputs }),
+      body: JSON.stringify({ model: this.config.model, input: safeInputs }),
     });
     if (!res.ok) {
       const body = await res.text();
