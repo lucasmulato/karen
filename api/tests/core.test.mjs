@@ -13,6 +13,7 @@ import { pickSuggestions, memoryDraft } from "../scripts/lib/vault-garden.mjs";
 import { findSecrets } from "../scripts/lib/secret-scan.mjs";
 import { extractEntities } from "../scripts/lib/entities.mjs";
 import { normalizePhone, buildWaLink, OutreachService } from "../build/services/outreach.js";
+import { autoResolvable, summarizeResolutions } from "../scripts/lib/auto-resolve.mjs";
 import {
   hardPolicy,
   parseModelOutput,
@@ -189,6 +190,17 @@ test('EVA triage merge never downgrades commands and counts policies', () => {
   assert.equal(merged[1].policy, 'auto');
   assert.equal(merged[2].policy, 'propose');
   assert.deepEqual(summarize(merged), { total: 3, auto: 1, propose: 1, blocked: 1 });
+});
+
+test('auto-resolve only closes informational items and audits them', () => {
+  assert.equal(autoResolvable({ source: 'key', policy: 'auto', forced: false }), true);
+  assert.equal(autoResolvable({ source: 'action', policy: 'auto', forced: false }), false);
+  assert.equal(autoResolvable({ source: 'command', policy: 'auto', forced: true }), false);
+  assert.equal(autoResolvable({ source: 'key', policy: 'propose', forced: false }), false);
+  assert.deepEqual(
+    summarizeResolutions([{ source: 'key' }, { source: 'key' }]),
+    { total: 2, bySource: { key: 2 } }
+  );
 });
 
 test('outreach handoff builds wa.me links without sending or storing the operator number', async () => {

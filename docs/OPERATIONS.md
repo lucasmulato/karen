@@ -167,8 +167,14 @@ external services beyond the free NVD/OSM/Cloudflare calls already approved.
   with an audit file (`backlinks-applied.json`). Never edits note files.
 - **Deploy**: `build_ui` calls `api/scripts/deploy-ui.sh` — test gate → build →
   backup → swap → smoke test → automatic rollback.
+- **Auto-resolve** (`auto-resolved.json`): informational items classified as
+  `auto` by the nightly triage are marked as handled with reason and timestamp,
+  then filtered from the queue/attention. Only the `key` source qualifies;
+  blocked items are never hidden. `node scripts/auto-resolve.mjs --revert`
+  puts them back. Runs at 04:00, right after triage.
 - **Graph diff** (`state-diff.json`): daily snapshot comparison of nodes/edges;
-  the first run only records the baseline.
+  the first run only records the baseline. The morning/evening digest shows it
+  under "O que mudou desde ontem".
 - **Canvas sync**: `Mapa.canvas` is regenerated from the graph; no note is edited.
 - **Auth correlation** (`auth-correlation.json`): SSH failures grouped by IP over
   24h. Read-only — it never blocks an address; review before acting.

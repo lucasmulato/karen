@@ -13,6 +13,7 @@ const ACTIONS = process.env.KAREN_ACTION_ITEMS ?? "/home/admin/karen/api/data/ac
 const AUDIT = process.env.KAREN_AUDIT_JSON ?? "/home/admin/karen/api/data/dependency-audit.json";
 const CREDITS = process.env.KAREN_CREDIT_JSON ?? "/home/admin/karen/api/data/credit-recommendations.json";
 const TRIAGE = process.env.KAREN_TRIAGE_JSON ?? "/home/admin/karen/api/data/eva-triage.json";
+const RESOLVED = process.env.KAREN_RESOLVED_JSON ?? "/home/admin/karen/api/data/auto-resolved.json";
 
 const KEY_LABELS: Record<string, string> = {
   CLOUDFLARE_API_TOKEN: "Embeddings semânticos",
@@ -170,8 +171,19 @@ export class QueueService {
       }
     }
 
+    // Items the deterministic auto-resolve job marked as handled disappear
+    // from attention. A blocked item is never hidden by this mechanism.
+    const resolvedFile = await readJson(RESOLVED);
+    const resolvedIds = new Set(
+      (Array.isArray(resolvedFile?.entries) ? resolvedFile.entries : [])
+        .map((entry: any) => String(entry?.id ?? ""))
+        .filter(Boolean)
+    );
+
     const seen = new Set<string>();
     return out.filter((item) => {
+      const bareId = item.id.replace(/^triage:/, "");
+      if (item.policy === "auto" && (resolvedIds.has(item.id) || resolvedIds.has(bareId))) return false;
       if (seen.has(item.dedupe_key)) return false;
       seen.add(item.dedupe_key);
       return true;

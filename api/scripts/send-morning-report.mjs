@@ -24,6 +24,7 @@ const ENV_FILE = resolve(process.env.KAREN_ENV_FILE || "/home/admin/models/karen
 const OPTIONAL_KEYS = ["APIFY_TOKEN", "CLOUDFLARE_API_TOKEN"];
 const TRIAGE = resolve(process.env.KAREN_TRIAGE_JSON || "/home/admin/karen/api/data/eva-triage.json");
 const GARDEN = resolve(process.env.KAREN_GARDEN_JSON || "/home/admin/karen/api/data/vault-maintenance.json");
+const DIFF = resolve(process.env.KAREN_STATE_DIFF_JSON || "/home/admin/karen/api/data/state-diff.json");
 
 function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (c) =>
@@ -71,6 +72,22 @@ async function triageSummary() {
   } catch { return null; }
 }
 
+async function stateDiffSummary() {
+  try {
+    const data = JSON.parse(await readFile(DIFF, "utf8"));
+    return {
+      first_run: Boolean(data.first_run),
+      generated_at: data.generated_at,
+      added: (data.nodes_added ?? []).length,
+      removed: (data.nodes_removed ?? []).length,
+      changed: (data.nodes_changed ?? []).length,
+      edges_added: Number(data.edges_added ?? 0),
+      edges_removed: Number(data.edges_removed ?? 0),
+      names: (data.nodes_added ?? []).slice(0, 3).map((n) => n.name),
+    };
+  } catch { return null; }
+}
+
 async function gardenMaintenance() {
   try {
     const data = JSON.parse(await readFile(GARDEN, "utf8"));
@@ -106,6 +123,7 @@ async function main() {
   const approvals = await pendingApprovals();
   const triage = await triageSummary();
   const garden = await gardenMaintenance();
+  const diff = await stateDiffSummary();
   const subject = EVENING
     ? `KAREN · noite · ${report.date} · ${approvals} aprovações, ${top.length} prioridades`
     : `KAREN · ${report.date} · ${approvals} aprovações, ${top.length} prioridades`;
@@ -124,6 +142,16 @@ async function main() {
     `</ol>`,
     `<h2>Jardim</h2>`,
     `<p>${stats.notes} notas no grafo · ${stats.orphans} órfãs · ${stats.stale} paradas há 30+ dias.</p>`,
+    ...(diff
+      ? [
+          `<h2>O que mudou desde ontem</h2>`,
+          diff.first_run
+            ? `<p>Primeiro snapshot — sem comparação ainda.</p>`
+            : `<p>+${diff.added} nós · -${diff.removed} · ~${diff.changed} alterados · ` +
+              `+${diff.edges_added} arestas · -${diff.edges_removed} removidas.</p>` +
+              (diff.names.length ? `<p>Novos: ${diff.names.map(escapeHtml).join(", ")}.</p>` : ""),
+        ]
+      : []),
     `<h2>Uma sugestão</h2>`,
     `<p>${top[0] ? `Avaliar primeiro: ${escapeHtml(top[0].title)}.` : "Nenhuma ação prioritária — dia calmo."}</p>`,
     `<h2>Aprovações pendentes</h2>`,
@@ -135,7 +163,7 @@ async function main() {
           `<h2>EVA · triagem noturna</h2>`,
           `<p>${triage.total} item(ns) triados: <b>${triage.auto}</b> resolvidos automaticamente, ` +
             `<b>${triage.propose}</b> precisam da sua decisão, <b>${triage.blocked}</b> bloqueados por regra de segurança. ` +
-            `A triagem nunca executa ações — itens "auto" são apenas leitura/reversíveis.</p>`,
+            `Itens "auto" são apenas leitura/reversíveis e foram marcados como resolvidos com auditoria (reversível).</p>`,
         ]
       : []),
     ...(garden
