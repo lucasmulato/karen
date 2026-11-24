@@ -15,6 +15,8 @@ export const MUTATING_TOOLS = new Set([
   "decision_log",
   "set_context",
   "set_mode",
+  "feedback",
+  "learning_checkin",
 ]);
 
 const MUTATION_INTENT =

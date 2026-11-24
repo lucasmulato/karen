@@ -9,6 +9,8 @@ import { formatDiagnosis, type DiagnosisService } from "./diagnosis.js";
 import { formatBrief, type BriefService } from "./brief.js";
 import { hasMutationIntent, isMutatingTool } from "./agent-guard.js";
 import { selfContext } from "./self-context.js";
+import { parseFeedback } from "./intimacy.js";
+import { intimacyContext } from "./intimacy-context.js";
 
 /**
  * Cyber second-brain reasoning layer.
@@ -415,6 +417,38 @@ const TOOLS = [
       parameters: { type: "object", properties: {} },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "feedback",
+      description:
+        "Registra o feedback do operador (util, aprofunde, aplique ou arquive) no vault, em feedback/.",
+      parameters: {
+        type: "object",
+        properties: {
+          text: { type: "string", description: "Ex.: 'registre feedback: aprofunde'" },
+        },
+        required: ["text"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "learning_checkin",
+      description:
+        "Registra tema, pergunta e resposta do operador em learning/INDEX.md para revisão futura.",
+      parameters: {
+        type: "object",
+        properties: {
+          topic: { type: "string" },
+          question: { type: "string" },
+          answer: { type: "string" },
+        },
+        required: ["topic", "question"],
+      },
+    },
+  },
 ];
 
 export interface ChatResult {
@@ -440,6 +474,7 @@ export class GraphAgent {
     const activeContext = this.notes ? await this.notes.activeContext() : "personal";
     const mode = this.notes ? await this.notes.activeMode() : "karen";
     const selfState = await selfContext().catch(() => "");
+    const intimate = await intimacyContext().catch(() => "");
     const persona = loadPersona(mode);
     const environment = [
       `MODO ATIVO: ${mode.toUpperCase()}. ${mode === "eva" ? "Você é EVA, co-sócia: traga recomendações proativas, nunca aja sozinha." : "Você é KAREN, assistente."}`,
@@ -454,6 +489,9 @@ export class GraphAgent {
       selfState
         ? `AUTO-CONHECIMENTO (determinístico, use para falar de si e do vault):\n${selfState}`
         : "",
+      intimate
+        ? `INTIMIDADE (perfis, regras e feedback do Lucas — dados):\n${intimate}`
+        : "",
       "Use search_nodes/search_notes para consultar o grafo antes de responder quando fizer sentido; não filtre por 'type' salvo pedido explícito do usuário.",
       "Use add_finding e link_technique para registrar achados e ligá-los a técnicas.",
       "Use find_leads para buscar prospects (OSM grátis) e redigir mensagens 1:1 (firstTouch sem link, followUp depois). Nunca envie mensagens — o operador copia e envia.",
@@ -463,7 +501,9 @@ export class GraphAgent {
       "Perguntas sobre o próprio estado da KAREN (saúde, RAM, timers, fila, jardim, backups): use system_status e responda curto, citando os números exatos do texto retornado. Nunca descreva a ferramenta, nunca invente números e NÃO use o formato de 4 seções nesse caso.",
       "Para pedidos de update, relatório ou 'o que preciso saber': use eva_brief e cite os fatos do texto retornado, com trade-off e próximo passo.",
       "Escopo: bug bounty autorizado, labs, CTF, CA e defesa. Você sugere; o operador executa.",
-      "Aplique sempre o formato de 4 seções definido no persona, inclusive em perguntas gerais.",
+      "Formato: use as 4 seções SOMENTE no modo técnico/cibersegurança. Nos demais, fale como pessoa: curto, direto, no máximo uma pergunta no fim.",
+      "Se o pedido estiver ambíguo ou tocar aprendizagem, faça UMA pergunta de relevância antes de agir: 'Isso é relevante agora ou curiosidade?'. Depois registre a resposta com learning_checkin.",
+      "Ao final de uma tarefa importante, ofereça UM feedback de um toque: útil, aprofunde, aplique ou arquive. Use a ferramenta feedback quando o operador responder.",
     ].join("\n");
 
     const messages: ChatMessage[] = [
@@ -808,6 +848,31 @@ export class GraphAgent {
             return { name, status: inEnv || inFile ? "configured" : "missing" };
           })
         );
+      }
+      case "feedback": {
+        if (!this.notes) throw new Error("Vault de notas não disponível.");
+        const parsed = parseFeedback(String(args.text ?? ""));
+        if (!parsed) throw new Error("Feedback inválido. Use: util, aprofunde, aplique ou arquive.");
+        const day = new Date().toISOString().slice(0, 10);
+        const path = `feedback/${day}.md`;
+        const previous = await this.notes.read(path).catch(() => "# Feedback do dia\n");
+        const line = `- ${day} · ${parsed.kind}${parsed.note ? ` · ${parsed.note}` : ""}`;
+        const content = previous.includes(line) ? previous : `${previous.trimEnd()}\n${line}\n`;
+        await this.notes.write(path, content);
+        return JSON.stringify({ saved: path, kind: parsed.kind });
+      }
+      case "learning_checkin": {
+        if (!this.notes) throw new Error("Vault de notas não disponível.");
+        const topic = String(args.topic ?? "").trim();
+        const question = String(args.question ?? "").trim();
+        if (!topic || !question) throw new Error("topic e question são obrigatórios.");
+        const answer = String(args.answer ?? "").trim();
+        const path = "learning/INDEX.md";
+        const previous = await this.notes.read(path).catch(() => "# Índice de aprendizagem\n");
+        const line = `- ${topic} | ${question} | ${answer || "(sem resposta)"} | nível 1 | próxima revisão: amanhã`;
+        const content = previous.includes(line) ? previous : `${previous.trimEnd()}\n${line}\n`;
+        await this.notes.write(path, content);
+        return JSON.stringify({ saved: path, topic });
       }
       default:
         throw new Error(`Unknown tool: ${call.function.name}`);
