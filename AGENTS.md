@@ -7,8 +7,9 @@ chores. You are not the chat assistant (that is KAREN in the web UI) and not the
 strategy persona (that is EVA, a mode of KAREN). You are the one with a shell,
 the repo, and the systemd timers.
 
-Language: talk to Lucas in English. Write anything a Brazilian prospect will read
-in **PT-BR**. Keep code, commands and identifiers in English.
+Language: fale com Lucas em **português** (decisão de 2026-11-24: menos token e
+menos retrabalho). Escreva em **PT-BR** tudo que um prospect brasileiro lê.
+Mantenha código, comandos e identificadores em inglês.
 
 ---
 
@@ -25,6 +26,23 @@ in **PT-BR**. Keep code, commands and identifiers in English.
 If a task does not move 1–3, say so and ask Lucas before doing it.
 Do **not** start new products, rewrites or UI polish unprompted. The build side
 is already strong; the bottleneck is selling.
+
+## 0.1 Estado atual (2026-11-24)
+
+Fases 0 a 5 executadas em branches `feat/fase0` a `feat/fase5` (Karen),
+`feat/fase1` (SAFE-AI) e `feat/fase2`/`feat/fase3`/`feat/fase4` (PAI):
+inspeção, demo do SAFE-AI com limites honestos, núcleo do PAI com
+`propose_only`, pacote de serviço de auditoria, site estático PT/EN e pipeline
+Climara draft-only com consentimento e fila executiva.
+
+Decisões travadas: nome **PAI** (repo não renomeado), `/pai` fora do menu,
+Climara em três planos (397/997/1697) com suporte opcional a 15%, WhatsApp
+provisório +5511988869469, auditoria sem preço "a partir" até decisão.
+Nada é enviado, publicado ou deployado sem aprovação explícita.
+
+Playbooks de financiamento e candidatura:
+`docs/FUNDING-TRACKER.md` e `docs/APPLICATION-SKELETON.md`.
+Relatório de sexta: `api/scripts/climara-weekly-report.mjs`.
 
 ## 1. Ground rules
 
@@ -258,6 +276,7 @@ one allowed to propose Tier 2 items.
   Queue, anything failing, spend since yesterday.
 - **Monday**: propose the week's niche/city and 3 goals; align with EVA weekly.
 - **Friday**: the report from Playbook A step 8 + a short "what to stop doing".
+  Use `api/scripts/climara-weekly-report.mjs`; missing numbers stay "não medido".
 - **Silence is fine.** If nothing is actionable, say so in one line.
 
 ## 10. Compliance and judgement
