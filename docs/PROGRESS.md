@@ -55,8 +55,8 @@ site; `SITE_URL` real.
 
 ## Fase 5 — 2026-11-24
 
-Branch `feat/fase5` (sem push). Pipeline Climara como serviços testáveis,
-sem envio automático.
+Branch `feat/fase5`. Pipeline Climara como serviços testáveis, sem envio
+automático.
 
 Mudou: config de nicho/cidade (`api/config/climara-pipeline.json`), score
 explicável de leads, `consent_ledger` append-only com opt-out, Fila Executiva
@@ -70,7 +70,7 @@ Como testar:
 ```
 cd /home/admin/karen/api
 npm test
-# 36 tests pass
+# 36 testes passam nesta branch isolada
 node scripts/climara-weekly-report.mjs
 # imprime cinco números, todos "não medido" sem arquivo de métricas
 ```
@@ -79,3 +79,37 @@ Pendente: integrar o scan OSM ao pipeline com cache/rate limit configurados;
 ligar a Fila Executiva à UI; gerar previews em lote; validar a política gerada
 com o SAFE-AI em CI; definir canal de envio com o Lucas; revisar o template de
 contato com advogado.
+
+## Fase 6 — 2026-11-24
+
+Branch `feat/fase6`. Operação e documentação.
+
+Mudou: `AGENTS.md` com idioma português e estado das fases 0-5;
+`docs/FUNDING-TRACKER.md` com fontes verificadas em 2026-11-24 (Manifund,
+Transformative AI Fund, Alignment Project fechado, FAPESC parcial);
+`docs/APPLICATION-SKELETON.md` com pergunta, marcos, orçamento e limites;
+3 testes de consistência dos documentos.
+
+Como testar (branch isolada):
+
+```
+cd /home/admin/karen/api
+npm test
+# 32 testes passam nesta branch isolada
+```
+
+Pendente: confirmar "AI Safety Residency 2026"/"Private R&D"; definir e-mail
+oficial e `SITE_URL` do site; publicar depende de aprovação Tier 2.
+
+## Integração
+
+Conflitos resolvidos em `integration/karen-fases`: `docs/PROGRESS.md`
+continha um resumo por branch; o conteúdo foi concatenado em ordem cronológica.
+Nenhuma `main` foi alterada e nada foi empurrado.
+
+Teste final da integração:
+
+```
+cd /home/admin/karen/api
+npm test
+```
