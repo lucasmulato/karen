@@ -36,5 +36,12 @@ PAI em `feat/fase2`: README em duas camadas, nome PAI, modo padrão
 24h, rollback com dry-run testado, Policy-as-Code para SAFE-AI, threat model e
 pergunta de pesquisa. 10 testes verdes.
 
+## Fase 3 — 2026-11-24
+
+PAI em `feat/fase3`: pacote `service/` com escopo de 5 etapas, templates,
+checklist de inventário, vertical financeiro, one-pagers PT/EN, proposta
+white-label e checklist LGPD. Sem preço inventado e sem promessa de
+conformidade. 16 testes verdes.
+
 Pendente: confirmar "AI Safety Residency 2026"/"Private R&D"; definir escopo do
 suporte Climara; vídeo/GIF do demo; Lighthouse; EN do site.
