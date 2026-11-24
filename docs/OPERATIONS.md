@@ -56,6 +56,35 @@ node scripts/eva-nightly-triage.mjs             # calls the LLM and writes the s
 If the LLM is unavailable the script still writes a valid file (all items fall
 back to `propose`, with `llm_error` recorded) — the queue never breaks.
 
+### Conversations / Fase 0 (Climara + Karen)
+
+`POST /api/conversations/ingest` receives a pasted transcript, redacts
+credential-shaped values, deduplicates by `brand + transcript hash` and
+classifies it as `client` / `not_client` / `unclear`. Explicit refusal is a
+deterministic override: the model can only upgrade `unclear` → `client`, never
+override a refusal. It then produces two artefacts — a versioned **system
+prompt** for the follow-up agent and the **final message**. If the local model
+is unavailable, deterministic templates are used instead.
+
+Only `client` conversations become a `critical` + `blocked` item in
+`/api/dashboard/queue` and an `urgent` row in `action-items.json` (feeding
+`send-alert.mjs --urgent`). `POST /api/conversations/:id/decide` records the
+human decision with the username. **No route sends a message.**
+
+Brand isolation is enforced server-side: `owner` sees Karen + Climara;
+`marketing` (Maria Luiza) sees only Climara, including leads and outreach.
+The marketing account is provisioned at API boot from `KAREN_MARKETING_USER`
+and `KAREN_MARKETING_PASSWORD`, with **no MFA** (operator decision 2026-11-24).
+Legacy users with no `role` field are treated as owners.
+
+`api/scripts/eva-manager.mjs` (hourly timer `karen-eva-manager`) proposes
+reminders for critical deliveries waiting >2h and leads confirmed >36h ago
+with no follow-up. It only writes action items; it never approves or sends.
+
+```bash
+node scripts/eva-manager.mjs --dry-run   # proposal only
+```
+
 ## Verify the system
 
 ```bash
@@ -76,6 +105,7 @@ curl -s http://127.0.0.1:3000/api/health/full
 | `karen-audit` | Monday 08:30 | npm audit report |
 | `karen-eva-weekly` | Monday 10:00 | EVA strategy-review e-mail |
 | `karen-eva-triage` | daily 23:30 | EVA classifies queue items (`auto` / `propose` / `blocked`) |
+| `karen-eva-manager` | hourly :15 | critical-delivery and follow-up reminders (read-only) |
 | `karen-vault-garden` | daily 05:00 | orphan backlink suggestions + MEMORY.md draft (never applies) |
 | `karen-secret-scan` | daily 07:00 | local secret scan (repo + vault), pattern/line only |
 | `karen-knowledge-sync` | daily 07:15 | auto-embed new nodes + extract CVE/tool entities |

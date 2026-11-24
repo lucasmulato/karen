@@ -28,7 +28,7 @@ export type Policy = "auto" | "propose" | "blocked";
 
 export interface QueueItem {
   id: string;
-  source: "command" | "action" | "key" | "audit" | "credit" | "triage";
+  source: "command" | "action" | "key" | "audit" | "credit" | "triage" | "conversation";
   severity: Severity;
   policy: Policy;
   title: string;
@@ -74,6 +74,8 @@ export class QueueService {
     const actions = (await readJson(ACTIONS)) ?? [];
     for (const action of Array.isArray(actions) ? actions : []) {
       const topic = String(action.topic ?? "action");
+      // Conversation deliveries get their own typed item below (section 2b).
+      if (topic.startsWith("conversation:")) continue;
       out.push({
         id: `action:${topic}`,
         source: "action",
@@ -85,6 +87,31 @@ export class QueueService {
         dedupe_key: `action:${topic}`,
       });
     }
+
+    // 2b. Conversation deliveries awaiting a human decision — "extreme
+    // importance": always critical + blocked, never auto-resolvable.
+    try {
+      const res = await this.client.query(
+        `SELECT id, brand, classification, status, created_at
+           FROM lead_conversations
+          WHERE status = 'pending' AND classification = 'client'
+          ORDER BY created_at ASC LIMIT 30`
+      );
+      for (const row of res.rows) {
+        out.push({
+          id: `conversation:${row.id}`,
+          source: "conversation",
+          severity: "critical",
+          policy: "blocked",
+          title: `Entrega crítica: prompt pronto (${String(row.brand).toUpperCase()})`,
+          detail: `Conversa classificada como cliente ${row.id}`.slice(0, 200) +
+            `. Revisar prompt e mensagem antes de qualquer envio.`,
+          route: "/app/?pane=conversations",
+          dedupe_key: `conversation:${row.id}`,
+          created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined,
+        });
+      }
+    } catch { /* queue still works without the new table */ }
 
     // 3. Missing optional keys.
     let envText = "";
@@ -150,7 +177,11 @@ export class QueueService {
         const classified = byId.get(item.id);
         if (!classified || !["auto", "propose", "blocked"].includes(classified.policy)) continue;
         byId.delete(item.id);
-        if (item.source === "command" && classified.policy === "auto") continue;
+        // The human gate is sacred for command approvals AND conversations.
+        if (
+          (item.source === "command" || item.source === "conversation") &&
+          classified.policy === "auto"
+        ) continue;
         item.policy = classified.policy as Policy;
         const reason = String(classified.reason ?? "").trim();
         if (reason) item.detail = `${item.detail ? `${item.detail} · ` : ""}EVA: ${reason}`;

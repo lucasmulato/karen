@@ -15,6 +15,8 @@ const USERS_FILE = resolve(
 const FAILURES_FILE = resolve(
   process.env.KAREN_AUTH_FAILURES || "/home/admin/karen/api/data/auth-failures.json"
 );
+import type { Brand, Role } from "./brands.js";
+
 const SECRET = process.env.KAREN_SESSION_SECRET || "karen-dev-secret-change-me";
 const COOKIE = "karen_session";
 const MAX_AGE = 7 * 24 * 60 * 60;
@@ -26,6 +28,8 @@ interface User {
   hash: string;
   totpSecret?: string;
   sessionVersion?: number;
+  role?: Role;
+  brands?: Brand[];
 }
 
 const failures = new Map<string, { count: number; resetAt: number }>();
@@ -164,8 +168,50 @@ export class AuthService {
     const users = await readUsers();
     if (users.some((u) => u.username === "karen")) return;
     const salt = randomBytes(16).toString("hex");
-    users.push({ username: "karen", salt, hash: hashPassword(password, salt), sessionVersion: 0 });
+    users.push({
+      username: "karen",
+      salt,
+      hash: hashPassword(password, salt),
+      sessionVersion: 0,
+      role: "owner",
+      brands: ["karen", "climara"],
+    });
     await writeUsers(users);
+  }
+
+  /**
+   * Idempotent user provisioning for the multi-company setup. Deliberately
+   * does NOT configure TOTP: the marketing user works without MFA.
+   */
+  async ensureUser(
+    username: string,
+    password: string,
+    role: Role,
+    brands: Brand[]
+  ): Promise<{ created: boolean }> {
+    const users = await readUsers();
+    const existing = users.find((u) => u.username === username);
+    if (existing) {
+      let changed = false;
+      if (existing.role !== role) { existing.role = role; changed = true; }
+      if (JSON.stringify(existing.brands ?? []) !== JSON.stringify(brands)) {
+        existing.brands = brands;
+        changed = true;
+      }
+      if (changed) await writeUsers(users);
+      return { created: false };
+    }
+    const salt = randomBytes(16).toString("hex");
+    users.push({
+      username,
+      salt,
+      hash: hashPassword(password, salt),
+      sessionVersion: 0,
+      role,
+      brands,
+    });
+    await writeUsers(users);
+    return { created: true };
   }
 
   async login(username: string, password: string, ip: string): Promise<LoginResult | null> {
@@ -195,13 +241,20 @@ export class AuthService {
     return tokenFor(user.username, user.sessionVersion ?? 0);
   }
 
-  async session(req: http.IncomingMessage): Promise<{ username: string } | null> {
+  async session(
+    req: http.IncomingMessage
+  ): Promise<{ username: string; role: Role; brands: Brand[] } | null> {
     const parsed = parseToken(cookieValue(req, COOKIE));
     if (!parsed) return null;
     const users = await readUsers();
     const user = users.find((u) => u.username === parsed.username);
     if (!user || (user.sessionVersion ?? 0) !== parsed.version) return null;
-    return { username: parsed.username };
+    // Legacy users (no role field) are owners with access to every brand.
+    const role: Role = user.role ?? "owner";
+    const brands: Brand[] = (user.brands ?? ["karen", "climara"]).filter(
+      (b): b is Brand => b === "karen" || b === "climara"
+    );
+    return { username: parsed.username, role, brands };
   }
 
   async setupMfa(username: string): Promise<{ secret: string; uri: string } | null> {

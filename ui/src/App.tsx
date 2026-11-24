@@ -19,9 +19,11 @@ import {
   NotebookPen,
   Terminal,
   X,
+  MessagesSquare,
 } from 'lucide-react';
 import ChatPanel from './components/ChatPanel';
 import OutreachPanel from './components/OutreachPanel';
+import ConversationsPanel from './components/ConversationsPanel';
 import LeadsPanel from './components/LeadsPanel';
 import CommandPanel from './components/CommandPanel';
 import HealthStrip from './components/HealthStrip';
@@ -88,6 +90,7 @@ const App: React.FC = () => {
   const [showCommands, setShowCommands] = useState(false);
   const [showEva, setShowEva] = useState(false);
   const [showOutreach, setShowOutreach] = useState(false);
+  const [showConversations, setShowConversations] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [mode, setMode] = useState<'karen' | 'eva'>('karen');
@@ -131,6 +134,15 @@ const App: React.FC = () => {
       setShowLeads(false);
       setShowEva(false);
       setShowOutreach(false);
+      setShowConversations(false);
+    }
+    if (pane === 'conversations') {
+      setShowConversations(true);
+      setShowChat(false);
+      setShowLeads(false);
+      setShowCommands(false);
+      setShowEva(false);
+      setShowOutreach(false);
     }
   }, []);
 
@@ -161,6 +173,7 @@ const App: React.FC = () => {
         setShowCommands(false);
         setShowEva(false);
         setShowOutreach(false);
+        setShowConversations(false);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -362,12 +375,13 @@ const App: React.FC = () => {
         )
       : undefined;
 
-  function openPane(pane: 'chat' | 'leads' | 'commands' | 'eva' | 'notes' | 'outreach') {
+  function openPane(pane: 'chat' | 'leads' | 'commands' | 'eva' | 'notes' | 'outreach' | 'conversations') {
     setShowChat(pane === 'chat');
     setShowLeads(pane === 'leads');
     setShowCommands(pane === 'commands');
     setShowEva(pane === 'eva');
     setShowOutreach(pane === 'outreach');
+    setShowConversations(pane === 'conversations');
     if (pane === 'notes') setMainView('notes');
     setRevealed(false);
   }
@@ -420,6 +434,7 @@ const App: React.FC = () => {
       setChatCommand({ id: Date.now(), text: '/diagnosis' });
     } },
     { id: 'outreach', label: 'Mensagens prontas', hint: 'handoff WhatsApp manual', icon: PALETTE_ICONS.leads, run: () => openPane('outreach') },
+    { id: 'conversations', label: 'Conversas e entregas críticas', hint: 'prompt de sistema + mensagem', icon: PALETTE_ICONS.eva, run: () => openPane('conversations') },
   ];
 
   const connectBannerText = !connect
@@ -546,6 +561,23 @@ const App: React.FC = () => {
             title="Mensagens prontas · envio manual"
           >
             <Send size={24} />
+          </button>
+          <button
+            onClick={() => {
+              setShowConversations((v) => !v);
+              setShowChat(false);
+              setShowLeads(false);
+              setShowCommands(false);
+              setShowEva(false);
+              setShowOutreach(false);
+              setSidebarOpen(false);
+            }}
+            className={`p-2 transition-colors ${
+              showConversations ? 'text-amber-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
+            }`}
+            title="Conversas · prompts e entregas críticas"
+          >
+            <MessagesSquare size={24} />
           </button>
           <button
             onClick={() => setMainView('graph')}
@@ -792,7 +824,7 @@ const App: React.FC = () => {
         )}
         </div>
 
-        {(showChat || showCommands || showLeads || showEva || showOutreach) && (
+        {(showChat || showCommands || showLeads || showEva || showOutreach || showConversations) && (
           <div
             role="separator"
             aria-orientation="vertical"
@@ -812,7 +844,7 @@ const App: React.FC = () => {
           />
         )}
 
-        {(showChat || showLeads || showCommands || showEva || showOutreach) && (
+        {(showChat || showLeads || showCommands || showEva || showOutreach || showConversations) && (
           <aside className="w-full @md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 @md:border-l-0 bg-black">
             {showChat && (
               <WorkspacePane
@@ -861,6 +893,16 @@ const App: React.FC = () => {
                 onClose={() => setShowOutreach(false)}
               >
                 <OutreachPanel />
+              </WorkspacePane>
+            )}
+
+            {showConversations && (
+              <WorkspacePane
+                title="Conversas"
+                subtitle="Classificação · prompt de sistema · mensagem final"
+                onClose={() => setShowConversations(false)}
+              >
+                <ConversationsPanel />
               </WorkspacePane>
             )}
 

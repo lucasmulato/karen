@@ -7,9 +7,11 @@ import type { Client } from "pg";
 import type { LeadQuery, ScrapedPlace } from "./apify.js";
 import type { LeadProvider } from "./providers.js";
 import { draftFor, type DraftContext, type OutreachDraft } from "../templates/outreach.js";
+import { isBrand, type Brand } from "./brands.js";
 
 export interface LeadRow {
   id: string;
+  brand: string;
   place_id: string;
   title: string;
   phone: string | null;
@@ -37,12 +39,13 @@ export interface LeadRunResult {
   runId: string | null;
 }
 
-const COLUMNS = `id, place_id, title, phone, address, neighborhood, city,
+const COLUMNS = `id, brand, place_id, title, phone, address, neighborhood, city,
   category, rating, reviews_count, website, maps_url, draft, suppressed, created_at`;
 
 function mapRow(row: any): LeadRow {
   return {
     id: row.id,
+    brand: String(row.brand ?? "karen"),
     place_id: row.place_id,
     title: row.title,
     phone: row.phone,
@@ -79,7 +82,7 @@ export class LeadService {
     return this.provider?.estimateCost(maxPlaces) ?? 0;
   }
 
-  async scrape(query: LeadQuery): Promise<LeadRunResult> {
+  async scrape(query: LeadQuery, brand: Brand = "karen"): Promise<LeadRunResult> {
     if (!this.provider) {
       throw new Error(
         "Leads are disabled: set LEAD_PROVIDER=osm (or apify with APIFY_TOKEN)."
@@ -106,12 +109,13 @@ export class LeadService {
       const draft = draftFor(place, this.ctx);
       const inserted = await this.client.query(
         `INSERT INTO leads
-          (place_id, title, phone, address, neighborhood, city, category,
+          (brand, place_id, title, phone, address, neighborhood, city, category,
            rating, reviews_count, website, maps_url, draft)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
          ON CONFLICT (place_id) DO NOTHING
          RETURNING ${COLUMNS}`,
         [
+          isBrand(brand) ? brand : "karen",
           place.placeId,
           place.title,
           place.phone,
@@ -144,11 +148,18 @@ export class LeadService {
     };
   }
 
-  async list(limit = 100): Promise<LeadRow[]> {
-    const res = await this.client.query(
-      `SELECT ${COLUMNS} FROM leads ORDER BY created_at DESC LIMIT $1`,
-      [Math.min(Math.trunc(limit) || 100, 500)]
-    );
+  async list(limit = 100, brands?: string[]): Promise<LeadRow[]> {
+    const capped = Math.min(Math.trunc(limit) || 100, 500);
+    const res = brands && brands.length
+      ? await this.client.query(
+          `SELECT ${COLUMNS} FROM leads WHERE brand = ANY($2::text[])
+            ORDER BY created_at DESC LIMIT $1`,
+          [capped, brands]
+        )
+      : await this.client.query(
+          `SELECT ${COLUMNS} FROM leads ORDER BY created_at DESC LIMIT $1`,
+          [capped]
+        );
     return res.rows.map(mapRow);
   }
 

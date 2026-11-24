@@ -13,6 +13,7 @@ export const STATUSES: OutreachStatus[] = ["ready", "copied", "sent", "dismissed
 
 export interface OutreachItem {
   id: string;
+  brand: string;
   title: string;
   phone: string | null;
   wa_link: string;
@@ -64,7 +65,7 @@ export class OutreachService {
   async items(): Promise<OutreachItem[]> {
     const state = await readState();
     const res = await this.client.query(
-      `SELECT id, title, phone, draft, created_at FROM leads
+      `SELECT id, brand, title, phone, draft, created_at FROM leads
         WHERE suppressed = FALSE
           AND draft->>'firstTouch' IS NOT NULL AND draft->>'firstTouch' <> ''
         ORDER BY created_at DESC LIMIT 100`
@@ -75,6 +76,7 @@ export class OutreachService {
       const entry = state[String(row.id)];
       return {
         id: String(row.id),
+        brand: String(row.brand ?? "karen"),
         title: String(row.title ?? ""),
         phone: normalizePhone(row.phone),
         wa_link: buildWaLink(row.phone, firstTouch),

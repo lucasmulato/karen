@@ -61,6 +61,41 @@ CREATE TABLE IF NOT EXISTS leads (
 CREATE INDEX IF NOT EXISTS idx_leads_suppressed ON leads(suppressed);
 CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at DESC);
 
+-- 2b-2. Phase 0: leads carry a brand/context so Karen and Climara stay apart.
+-- confirmed_* records the operator who qualified the lead.
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS brand TEXT NOT NULL DEFAULT 'karen';
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS confirmed_by TEXT;
+CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand);
+
+-- 2b-3. Conversation intelligence: a pasted/ingested transcript is classified
+-- (client vs not), then produces a versioned system prompt + final message.
+-- Delivery is always human-approved; `sent_at` is only filled after a send.
+CREATE TABLE IF NOT EXISTS lead_conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+    brand TEXT NOT NULL DEFAULT 'karen',
+    source TEXT NOT NULL DEFAULT 'manual',
+    transcript_hash TEXT NOT NULL,
+    transcript TEXT NOT NULL,
+    classification TEXT NOT NULL DEFAULT 'unclear',
+    score NUMERIC(4,3) NOT NULL DEFAULT 0,
+    reason TEXT NOT NULL DEFAULT '',
+    system_prompt TEXT NOT NULL DEFAULT '',
+    message TEXT NOT NULL DEFAULT '',
+    prompt_version TEXT NOT NULL DEFAULT 'v1',
+    status TEXT NOT NULL DEFAULT 'pending',
+    approved_by TEXT,
+    approved_at TIMESTAMPTZ,
+    sent_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (lead_id, transcript_hash)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_lead_conv_orphan
+    ON lead_conversations (brand, transcript_hash) WHERE lead_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_lead_conv_status ON lead_conversations(status);
+CREATE INDEX IF NOT EXISTS idx_lead_conv_brand ON lead_conversations(brand);
+
 -- 2c. KAREN command permission audit log.
 CREATE TABLE IF NOT EXISTS command_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

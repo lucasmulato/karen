@@ -74,6 +74,16 @@ follow-up for 24–48h later. Sending is always manual. Phone numbers can be
 added by hand, with a Google Maps lookup link and a `wa.me` handoff. Apify is
 available as an optional paid provider.
 
+### Conversations & Climara (Fase 0)
+A transcript pasted in the **Conversas** pane is classified (client / not
+client / unclear) and turned into two artefacts: a versioned system prompt for
+the follow-up agent and a final message. Explicit refusals are never
+overridden; an unavailable model falls back to deterministic templates. A
+qualified conversation becomes a `critical` + `blocked` queue item with an
+urgent e-mail — the human approves in the UI, and **nothing is sent
+automatically**. Karen and Climara are separate brands with isolated leads,
+prompts and approvals; the marketing user sees only Climara (no MFA).
+
 ### Command permissions
 Thirteen allowlisted commands (status, logs, disk, restart, reload, builds…).
 Read-only commands run immediately; mutating ones require explicit approval in

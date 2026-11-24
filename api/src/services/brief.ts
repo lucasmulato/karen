@@ -51,6 +51,8 @@ export interface BriefReport {
   };
   health: string;
   decisions: { path: string; text: string }[];
+  /** Climara's weekly plan, read from the vault (never from the website repo). */
+  climara_week: string[];
   next_steps: string[];
 }
 
@@ -110,6 +112,19 @@ function collectStaleDecisions(decisions: { path: string; text: string }[]) {
   return out.slice(0, 5);
 }
 
+/** Source of truth for EVA's weekly Climara plan (no digits in outreach prompts). */
+export async function climaraWeek(notes: VaultFsService): Promise<string[]> {
+  const text = await notes
+    .read("20 Areas/Climara — Semana.md")
+    .catch(() => "");
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^-\s+Dia\b/i.test(line))
+    .map((line) => line.replace(/^-\s*/, ""))
+    .slice(0, 10);
+}
+
 export class BriefService {
   constructor(
     private readonly client: Client,
@@ -118,7 +133,7 @@ export class BriefService {
   ) {}
 
   async build(): Promise<BriefReport> {
-    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport, outreach, hygiene, diff, authReport, proposalAudit, backlinkAudit] = await Promise.all([
+    const [queue, credits, triage, garden, decisions, diag, deadlines, leadRows, syncReport, outreach, hygiene, diff, authReport, proposalAudit, backlinkAudit, climaraWeekList] = await Promise.all([
       new QueueService(this.client).items().catch(() => []),
       readJson(`${DATA}/credit-recommendations.json`),
       readJson(process.env.KAREN_TRIAGE_JSON ?? `${DATA}/eva-triage.json`),
@@ -137,6 +152,7 @@ export class BriefService {
       readJson(`${DATA}/auth-correlation.json`),
       readJson(`${DATA}/proposals-applied.json`),
       readJson(`${DATA}/backlinks-applied.json`),
+      climaraWeek(this.notes).catch(() => []),
     ]);
 
     const needsYou = queue
@@ -254,6 +270,7 @@ export class BriefService {
       watch,
       health: diag ? formatDiagnosis(diag) : "Diagnóstico indisponível.",
       decisions,
+      climara_week: climaraWeekList,
       next_steps: steps,
     };
   }
@@ -305,6 +322,11 @@ export function formatBrief(brief: BriefReport): string {
     `- Mensagens prontas (envio manual): ${brief.outreach_ready}`,
     `- Propostas de higiene pendentes: ${brief.hygiene_proposals} (aplicadas: ${brief.applied.proposals})`,
     `- Backlinks aplicados com auditoria: ${brief.applied.backlinks}`,
+    "",
+    "🗓️ CLIMARA — PLANO DA SEMANA (na EVA, não no site)",
+    ...((brief.climara_week ?? []).length
+      ? (brief.climara_week ?? []).map((line) => `- ${line}`)
+      : ["- Plano não encontrado no vault."]),
     "",
     "⚖️ PRÓXIMO PASSO",
     ...brief.next_steps.map((step, i) => `${i + 1}. ${step}`),

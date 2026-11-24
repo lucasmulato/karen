@@ -28,6 +28,15 @@ import { DiagnosisService, formatDiagnosis } from "./services/diagnosis.js";
 import { BriefService } from "./services/brief.js";
 import { OutreachService, STATUSES } from "./services/outreach.js";
 import { fastPath } from "./services/fastpath.js";
+import { ConversationService } from "./services/conversation.js";
+import {
+  brandsForRole,
+  assertBrandAllowed,
+  isBrand,
+  BRANDS,
+  type Brand,
+  type Role,
+} from "./services/brands.js";
 
 // 1. Database Connection
 const DATABASE_URL =
@@ -66,6 +75,7 @@ const auth = new AuthService();
 const diagnosis = new DiagnosisService(client);
 const brief = new BriefService(client, notes, diagnosis);
 const outreach = new OutreachService(client);
+const conversations = new ConversationService(client);
 
 const MAX_PLACES = Number(process.env.APIFY_MAX_PLACES ?? 50);
 const WEBSITE_FILTER = process.env.APIFY_WEBSITE_FILTER ?? "placesWithoutWebsite";
@@ -308,6 +318,7 @@ const scrapeLeadsSchema = z.object({
   website: z
     .enum(["allPlaces", "placesWithWebsite", "placesWithoutWebsite"])
     .optional(),
+  brand: z.string().max(30).optional(),
 });
 
 const commandRequestSchema = z.object({
@@ -522,7 +533,18 @@ async function handleHttp(
         sendJson(res, 401, { error: "Não autenticado" });
         return;
       }
-      sendJson(res, 200, { username: session.username });
+      sendJson(res, 200, {
+        username: session.username,
+        role: session.role,
+        brands: brandsForRole(session.role, session.brands),
+      });
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/brands") {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      sendJson(res, 200, { brands: brandsForRole(session.role, session.brands) });
       return;
     }
 
@@ -609,7 +631,12 @@ async function handleHttp(
     }
 
     if (req.method === "GET" && path === "/api/outreach/queue") {
-      const items = await outreach.items();
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      const allowed = brandsForRole(session.role, session.brands);
+      const items = (await outreach.items()).filter((item) =>
+        allowed.includes(item.brand as Brand)
+      );
       const counts = {
         ready: items.filter((i) => i.status === "ready").length,
         copied: items.filter((i) => i.status === "copied").length,
@@ -631,9 +658,101 @@ async function handleHttp(
         sendJson(res, 400, { error: z.prettifyError(parsed.error) });
         return;
       }
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
       const item = await outreach.update(parsed.data.id, parsed.data.status as any);
       if (!item) { sendJson(res, 404, { error: "Mensagem não encontrada" }); return; }
+      if (!brandsForRole(session.role, session.brands).includes(item.brand as Brand)) {
+        sendJson(res, 403, { error: "Sem acesso a essa marca." });
+        return;
+      }
       sendJson(res, 200, { item });
+      return;
+    }
+
+    // --- Conversation intelligence (Fase 0) ---------------------------------
+    // A transcript is classified into two prompts and raises a critical item.
+    // No route here sends a message: approval only records the human decision.
+    if (req.method === "GET" && path === "/api/conversations") {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      const requested = url.searchParams.get("brand") ?? undefined;
+      const allowed = brandsForRole(session.role, session.brands);
+      if (requested && !allowed.includes(requested as Brand)) {
+        sendJson(res, 403, { error: "Sem acesso a essa marca." });
+        return;
+      }
+      sendJson(res, 200, {
+        items: await conversations.list(
+          requested ? [requested as Brand] : allowed,
+          Number(url.searchParams.get("limit") ?? 50)
+        ),
+        brands: allowed,
+      });
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/conversations/ingest") {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      if (isRateLimited(req.socket.remoteAddress ?? "unknown")) {
+        sendJson(res, 429, { error: "Too many requests" });
+        return;
+      }
+      const parsed = z
+        .object({
+          brand: z.string().min(1).max(30),
+          transcript: z.string().min(20).max(20_000),
+          leadId: z.string().regex(/^[0-9a-f-]{36}$/i).optional().nullable(),
+          source: z.string().max(40).optional(),
+        })
+        .safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      try {
+        assertBrandAllowed(session.role, session.brands, parsed.data.brand);
+        const result = await conversations.ingest({
+          ...parsed.data,
+          actor: session.username,
+        });
+        sendJson(res, 201, result);
+      } catch (err: any) {
+        sendJson(res, /Sem acesso|Marca inválida/.test(err.message) ? 403 : 400, {
+          error: err.message,
+        });
+      }
+      return;
+    }
+
+    if (req.method === "POST" && /^\/api\/conversations\/[\da-f-]+\/decide$/i.test(path)) {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      if (isRateLimited(req.socket.remoteAddress ?? "unknown")) {
+        sendJson(res, 429, { error: "Too many requests" });
+        return;
+      }
+      const id = path.split("/")[3];
+      const parsed = z
+        .object({ decision: z.enum(["approve", "reject"]) })
+        .safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      try {
+        const item = await conversations.decide(
+          id,
+          parsed.data.decision,
+          session.username,
+          brandsForRole(session.role, session.brands)
+        );
+        if (!item) { sendJson(res, 404, { error: "Conversa não encontrada" }); return; }
+        sendJson(res, 200, { item });
+      } catch (err: any) {
+        sendJson(res, 403, { error: err.message });
+      }
       return;
     }
 
@@ -760,7 +879,19 @@ async function handleHttp(
 
     // --- KAREN lead endpoints -------------------------------------------------
     if (req.method === "GET" && path === "/api/leads") {
-      sendJson(res, 200, { leads: await leads.list(Number(url.searchParams.get("limit") ?? 100)) });
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      const allowed = brandsForRole(session.role, session.brands);
+      const requested = url.searchParams.get("brand") ?? undefined;
+      if (requested && !allowed.includes(requested as Brand)) {
+        sendJson(res, 403, { error: "Sem acesso a essa marca." });
+        return;
+      }
+      const scoped = await leads.list(
+        Number(url.searchParams.get("limit") ?? 100),
+        requested ? [requested] : allowed
+      );
+      sendJson(res, 200, { leads: scoped, brands: allowed });
       return;
     }
 
@@ -780,6 +911,8 @@ async function handleHttp(
     }
 
     if (req.method === "POST" && path === "/api/leads/scrape") {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
       if (isRateLimited(req.socket.remoteAddress ?? "unknown")) {
         sendJson(res, 429, { error: "Too many requests" });
         return;
@@ -790,7 +923,10 @@ async function handleHttp(
         return;
       }
       try {
-        const result = await leads.scrape(parsed.data);
+        const brand = parsed.data.brand
+          ? assertBrandAllowed(session.role, session.brands, parsed.data.brand)
+          : brandsForRole(session.role, session.brands)[0];
+        const result = await leads.scrape(parsed.data, brand);
         sendJson(res, 200, result);
       } catch (err: any) {
         sendJson(res, 502, { error: err.message });
@@ -805,9 +941,15 @@ async function handleHttp(
         sendJson(res, 400, { error: z.prettifyError(parsed.error) });
         return;
       }
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
       const row = await leads.setPhone(id, parsed.data.phone);
       if (!row) {
         sendJson(res, 404, { error: "Lead not found" });
+        return;
+      }
+      if (!brandsForRole(session.role, session.brands).includes(row.brand as Brand)) {
+        sendJson(res, 403, { error: "Sem acesso a essa marca." });
         return;
       }
       sendJson(res, 200, row);
@@ -816,9 +958,15 @@ async function handleHttp(
 
     if (req.method === "POST" && /^\/api\/leads\/[\da-f-]+\/suppress$/i.test(path)) {
       const id = path.split("/")[3];
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
       const row = await leads.suppress(id);
       if (!row) {
         sendJson(res, 404, { error: "Lead not found" });
+        return;
+      }
+      if (!brandsForRole(session.role, session.brands).includes(row.brand as Brand)) {
+        sendJson(res, 403, { error: "Sem acesso a essa marca." });
         return;
       }
       sendJson(res, 200, row);
@@ -1141,6 +1289,23 @@ async function main() {
     if (password) await auth.ensureAdmin(password);
   } catch {
     // Auth still works for existing users; bootstrap is best-effort.
+  }
+
+  // Marketing user (Maria Luiza): Climara-only scope, no MFA. Credentials come
+  // from the env file outside the repo; nothing is written to git.
+  const marketingUser = process.env.KAREN_MARKETING_USER?.trim();
+  const marketingPassword = process.env.KAREN_MARKETING_PASSWORD?.trim();
+  if (marketingUser && marketingPassword) {
+    try {
+      const result = await auth.ensureUser(marketingUser, marketingPassword, "marketing", [
+        "climara",
+      ]);
+      console.error(
+        result.created ? `Marketing user provisioned: ${marketingUser}` : `Marketing user verified: ${marketingUser}`
+      );
+    } catch (err) {
+      console.error("Could not provision marketing user:", err);
+    }
   }
 
   const transport = new StdioServerTransport();

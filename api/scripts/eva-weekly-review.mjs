@@ -22,6 +22,20 @@ async function readJson(name) {
   try { return JSON.parse(await readFile(`${DATA}/${name}`, "utf8")); } catch { return null; }
 }
 
+/** Plano semanal da Climara: fonte no vault, nunca no repositório do site. */
+async function climaraWeek() {
+  const text = await readFile(
+    resolve(`${VAULT}/20 Areas/Climara — Semana.md`),
+    "utf8"
+  ).catch(() => "");
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^-\s+Dia\b/i.test(line))
+    .map((line) => line.replace(/^-\s*/, ""))
+    .slice(0, 10);
+}
+
 async function gardenStats() {
   const client = new Client({ connectionString: DATABASE_URL });
   await client.connect();
@@ -52,6 +66,7 @@ async function main() {
     readJson("os-updates.json"),
   ]);
   const garden = await gardenStats();
+  const week = await climaraWeek();
   const approvals = await pendingApprovals();
   const decisions = (await readdir(`${VAULT}/decisions`).catch(() => []))
     .filter((f) => f.endsWith(".md"))
@@ -76,6 +91,10 @@ async function main() {
           `<p>✅ <b>Próximo passo:</b> confirmar elegibilidade no canal oficial antes de qualquer inscrição.</p>`,
         ].join(""))
       : [`<p>Nenhuma oportunidade nova — semana calma é gestão também.</p>`]),
+    `<h3>Climara — plano da semana</h3>`,
+    week.length
+      ? `<ul>${week.map((line) => `<li>${esc(line)}</li>`).join("")}</ul>`
+      : `<p>Plano não encontrado no vault (20 Areas/Climara — Semana.md).</p>`,
     `<h3>Saúde do sistema</h3>`,
     `<ul>`,
     `<li>Notas órfãs: ${garden.orphans} · evergreen: ${garden.evergreen}</li>`,
@@ -97,6 +116,7 @@ async function main() {
     openActions: open.length,
     garden,
     decisions,
+    climaraWeek: week,
   };
   await mkdir(dirname(REPORT), { recursive: true });
   await writeFile(REPORT, JSON.stringify(summary, null, 2), "utf8");
