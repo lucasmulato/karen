@@ -51,7 +51,7 @@ const NODE_COLORS: Record<string, string> = {
   inbox: '#a1a1aa', // zinc
   area: '#f59e0b', // amber
   resource: '#3b82f6', // blue
-  archive: '#71717a', // zinc-dark
+  archive: '#71717a', // muted gray
   memory: '#a855f7', // purple
 };
 
@@ -292,15 +292,15 @@ const GraphView: React.FC<GraphViewProps> = ({
   }
 
   return (
-    <div ref={containerRef} className="relative h-full w-full bg-zinc-950">
+    <div ref={containerRef} className="relative h-full w-full bg-hud-bg">
       <svg ref={svgRef} className="h-full w-full" />
 
       {presentTypes.length > 0 && (
-        <div className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-lg border border-zinc-800 bg-black/70 p-2 backdrop-blur">
-          <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">Legenda</p>
+        <div className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-lg border border-hud-line bg-black/70 p-2 backdrop-blur">
+          <p className="mb-1 text-[10px] uppercase tracking-wider text-hud-muted">Legenda</p>
           <div className="flex max-w-64 flex-wrap gap-x-3 gap-y-1">
             {presentTypes.map((type) => (
-              <span key={type} className="flex items-center gap-1 text-[11px] text-zinc-400">
+              <span key={type} className="flex items-center gap-1 text-[11px] text-hud-muted">
                 <span
                   className="h-2 w-2 rounded-full"
                   style={{ background: NODE_COLORS[type] ?? '#9ca3af' }}
@@ -314,7 +314,7 @@ const GraphView: React.FC<GraphViewProps> = ({
 
       <button
         onClick={resetView}
-        className="absolute bottom-4 right-4 z-10 flex items-center gap-1 rounded-lg border border-zinc-800 bg-black/70 px-2 py-1.5 text-[11px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
+        className="absolute bottom-4 right-4 z-10 flex items-center gap-1 rounded-lg border border-hud-line bg-black/70 px-2 py-1.5 text-[11px] text-hud-muted hover:border-hud-cyan hover:text-hud-cyan"
         title="Centralizar grafo"
       >
         <RotateCcw size={12} /> Centralizar
@@ -322,11 +322,11 @@ const GraphView: React.FC<GraphViewProps> = ({
 
       {hovered && (
         <div
-          className="pointer-events-none absolute z-20 max-w-56 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 shadow-2xl"
+          className="pointer-events-none absolute z-20 max-w-56 rounded-lg border border-hud-line bg-hud-bg px-3 py-2 shadow-2xl"
           style={{ left: hovered.x + 14, top: hovered.y + 14 }}
         >
-          <p className="truncate text-xs font-medium text-zinc-100">{hovered.node.name}</p>
-          <p className="mt-0.5 text-[11px] text-zinc-500">[{hovered.node.type}]</p>
+          <p className="truncate text-xs font-medium text-slate-200">{hovered.node.name}</p>
+          <p className="mt-0.5 text-[11px] text-hud-muted">[{hovered.node.type}]</p>
         </div>
       )}
     </div>

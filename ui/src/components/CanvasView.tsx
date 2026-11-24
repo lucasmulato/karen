@@ -83,7 +83,7 @@ const CanvasView: React.FC<{ canvas: Canvas }> = ({ canvas }) => {
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full cursor-grab overflow-hidden bg-[#0e0e0e] active:cursor-grabbing"
+      className="relative h-full w-full cursor-grab overflow-hidden bg-hud-panel active:cursor-grabbing"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -130,7 +130,7 @@ const CanvasView: React.FC<{ canvas: Canvas }> = ({ canvas }) => {
         {nodes.map((n) => (
           <div
             key={n.id}
-            className="absolute overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 p-2 shadow-xl"
+            className="absolute overflow-hidden rounded-lg border border-hud-line bg-hud-raised p-2 shadow-xl"
             style={{
               left: n.x,
               top: n.y,
@@ -139,24 +139,24 @@ const CanvasView: React.FC<{ canvas: Canvas }> = ({ canvas }) => {
               borderTop: `3px solid ${COLORS[n.color ?? '6'] ?? '#a855f7'}`,
             }}
           >
-            <p className="truncate text-[12px] font-semibold text-zinc-100">{titleOf(n.text)}</p>
-            <p className="mt-1 line-clamp-3 text-[11px] text-zinc-500">
+            <p className="truncate text-[12px] font-semibold text-slate-200">{titleOf(n.text)}</p>
+            <p className="mt-1 line-clamp-3 text-[11px] text-hud-muted">
               {n.text.split('\n').filter((l) => l && !l.startsWith('#') && !/^\[[a-z_]+\]$/.test(l)).join(' ').slice(0, 180)}
             </p>
           </div>
         ))}
       </div>
-      <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-zinc-800 bg-black/80 p-1">
-        <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.1))} className="p-1 text-zinc-400 hover:text-white" title="Diminuir">
+      <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-hud-line bg-black/80 p-1">
+        <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.1))} className="p-1 text-hud-muted hover:text-white" title="Diminuir">
           <Minus size={13} />
         </button>
-        <span className="w-10 text-center text-[11px] text-zinc-500">{Math.round(zoom * 100)}%</span>
-        <button onClick={() => setZoom((z) => Math.min(2.5, z + 0.1))} className="p-1 text-zinc-400 hover:text-white" title="Aumentar">
+        <span className="w-10 text-center text-[11px] text-hud-muted">{Math.round(zoom * 100)}%</span>
+        <button onClick={() => setZoom((z) => Math.min(2.5, z + 0.1))} className="p-1 text-hud-muted hover:text-white" title="Aumentar">
           <Plus size={13} />
         </button>
         <button
           onClick={fit}
-          className="p-1 text-zinc-400 hover:text-white"
+          className="p-1 text-hud-muted hover:text-white"
           title="Ajustar à tela"
         >
           <RotateCcw size={13} />
