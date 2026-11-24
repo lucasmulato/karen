@@ -22,5 +22,12 @@ local substituiu `docker compose` (Docker ausente). Os 3 exemplos do README
 passaram; bypasses por `;`, `&&`, pipe e `$(...)` foram confirmados como
 PERMIT indevido e alimentarão a Fase 1.
 
+## Fase 1 — 2026-11-24
+
+SAFE-AI em `feat/fase1`: parser normalizado (shlex + rejeição de operadores de
+shell), 8 testes verdes, demo com injeção de prompt e ASK_HUMAN interativo,
+`--fast`, README com limites, README.en.md e roteiro PT/EN. Bypasses de `;`,
+`&&`, pipe e `$(...)` agora retornam REJECT.
+
 Pendente: confirmar "AI Safety Residency 2026"/"Private R&D"; definir escopo do
 suporte Climara; vídeo/GIF do demo; Lighthouse; EN do site.
