@@ -17,6 +17,10 @@ git -C /home/admin/karen status -sb
 # ## feat/fase0
 ```
 
-Pendente: URLs/ repos de SAFE-AI e LLM-SEC; `docker compose up` e testes de
-bypass; confirmar "AI Safety Residency 2026"/"Private R&D"; definir escopo do
+Fase 0 complementada em 2026-11-24 com SAFE-AI e LLM-SEC clonados. Uvicorn
+local substituiu `docker compose` (Docker ausente). Os 3 exemplos do README
+passaram; bypasses por `;`, `&&`, pipe e `$(...)` foram confirmados como
+PERMIT indevido e alimentarão a Fase 1.
+
+Pendente: confirmar "AI Safety Residency 2026"/"Private R&D"; definir escopo do
 suporte Climara; vídeo/GIF do demo; Lighthouse; EN do site.

