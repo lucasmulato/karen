@@ -43,5 +43,12 @@ checklist de inventário, vertical financeiro, one-pagers PT/EN, proposta
 white-label e checklist LGPD. Sem preço inventado e sem promessa de
 conformidade. 16 testes verdes.
 
+## Fase 4 — 2026-11-24
+
+Site estático em `PAI/site/`: PT/EN gerados de JSON, `/pai` escondido sem link
+no menu, sem backend e sem analytics, transcrição real do demo. 5 testes de
+build/conteúdo verdes. Sem deploy.
+
 Pendente: confirmar "AI Safety Residency 2026"/"Private R&D"; definir escopo do
-suporte Climara; vídeo/GIF do demo; Lighthouse; EN do site.
+suporte Climara; vídeo/GIF do demo; Lighthouse (não medido); e-mail oficial do
+site; `SITE_URL` real.
