@@ -45,6 +45,9 @@ remains without prices until a Tier 2 approval to publish (EQ-006).
 - `drafts/climara-leads-jaragua-2026-11-24.md`
 - `drafts/previews/01..05-*.html`
 - `drafts/executive-queue.md`
+- `drafts/outreach-log.md` (source/date/outcome per contact; all `draft`)
+- `drafts/friday-report-2026-11-27.md` (skeleton, to fill with real numbers)
+- `grants/tracker.md` (first pass, facts checked on funders' own pages)
 - `decisions/2026-11-24-nicho-e-preco-climara.md`
 
 ## Open decisions
