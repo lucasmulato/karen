@@ -13,3 +13,5 @@ One line each: date, decision, reason.
 - 2026-11-24 — Fase 0 sem docker/bypass tests — bloqueado pela ausência de SAFE-AI; não inventar resultado.
 - 2026-11-24 — Uvicorn local como equivalente a `docker compose up` — Docker não instalado; mesmas env vars do compose.
 - 2026-11-24 — Bypasses por encadeamento/pipe/substituição confirmados — Fase 1 deve normalizar com parser de shell e adicionar regressão.
+- 2026-11-24 — PAI com modo padrão `propose_only` — nenhum patch sem aprovação humana; modos auto experimentais.
+- 2026-11-24 — Repo do PAI não renomeado — Lucas não aprovou rename; nome canônico PAI apenas no texto.

@@ -29,5 +29,12 @@ shell), 8 testes verdes, demo com injeção de prompt e ASK_HUMAN interativo,
 `--fast`, README com limites, README.en.md e roteiro PT/EN. Bypasses de `;`,
 `&&`, pipe e `$(...)` agora retornam REJECT.
 
+## Fase 2 — 2026-11-24
+
+PAI em `feat/fase2`: README em duas camadas, nome PAI, modo padrão
+`propose_only`, Utility Guardian com 10 tarefas da Karen, trava de patches por
+24h, rollback com dry-run testado, Policy-as-Code para SAFE-AI, threat model e
+pergunta de pesquisa. 10 testes verdes.
+
 Pendente: confirmar "AI Safety Residency 2026"/"Private R&D"; definir escopo do
 suporte Climara; vídeo/GIF do demo; Lighthouse; EN do site.
