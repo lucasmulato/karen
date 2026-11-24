@@ -1,0 +1,11 @@
+{
+  "brand": "climara",
+  "city": "Jaraguá do Sul, SC",
+  "niche": "pequenos negócios locais",
+  "query": "loja",
+  "maxPlaces": 25,
+  "scanIntervalHours": 24,
+  "overpassCacheMinutes": 10,
+  "rateLimitPerMinute": 4,
+  "notes": "Nicho e cidade decididos com Lucas em 2026-11-24. Nenhum envio automático: todo texto vira rascunho na fila executiva."
+}
