@@ -9,6 +9,16 @@ import { z } from "zod";
 import http from "node:http";
 import { connect as tlsConnect } from "node:tls";
 import { readFileSync } from "node:fs";
+import { writeFile, readFile, unlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { spawn } from "node:child_process";
+import {
+  decodeAudio,
+  sttEndpoint,
+  ttsBinary,
+  ttsModelPath,
+  validateSpeechText,
+} from "./services/voice.js";
 import { VaultService, NODE_TYPES, EDGE_LABELS } from "./services/vault.js";
 import { GraphAgent, chatConfigFromEnv } from "./services/agent.js";
 import { EmbeddingService, embeddingConfigFromEnv } from "./services/embeddings.js";
@@ -1291,6 +1301,107 @@ async function handleHttp(
           ? await commands.approve(runId, parsed.data.token)
           : await commands.deny(runId, parsed.data.token);
       sendJson(res, result.status === "unauthorized" ? 403 : 200, result);
+      return;
+    }
+
+    // --- Local voice endpoints (EQ-VOICE-01): no cloud, no auto-send --------
+    if (req.method === "POST" && path === "/api/voice/transcribe") {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      if (isRateLimited(req.socket.remoteAddress ?? "unknown")) {
+        sendJson(res, 429, { error: "Too many requests" });
+        return;
+      }
+      const parsed = z
+        .object({ audio: z.string(), mime: z.string().max(40).optional() })
+        .safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      let buffer: Buffer;
+      try {
+        buffer = decodeAudio(parsed.data.audio);
+      } catch (err: any) {
+        sendJson(res, 400, { error: err.message });
+        return;
+      }
+      const tempPath = `${tmpdir()}/karen-voice-${Date.now()}.wav`;
+      try {
+        await writeFile(tempPath, buffer);
+        const form = new FormData();
+        form.append(
+          "file",
+          new Blob([new Uint8Array(buffer)], { type: parsed.data.mime ?? "audio/wav" }),
+          "audio.wav"
+        );
+        form.append("response_format", "json");
+        form.append("language", "pt");
+        const response = await fetch(sttEndpoint(), {
+          method: "POST",
+          body: form,
+          signal: AbortSignal.timeout(60_000),
+        });
+        if (!response.ok) {
+          sendJson(res, 502, { error: `STT local indisponível (${response.status}).` });
+          return;
+        }
+        const body = (await response.json()) as Record<string, any>;
+        const text = String(body.text ?? body.transcription ?? body.output?.text ?? "");
+        sendJson(res, 200, { text, engine: "whisper.cpp", local: true });
+      } catch {
+        sendJson(res, 502, { error: "Falha ao transcrever localmente." });
+      } finally {
+        await unlink(tempPath).catch(() => undefined);
+      }
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/voice/synthesize") {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      if (isRateLimited(req.socket.remoteAddress ?? "unknown")) {
+        sendJson(res, 429, { error: "Too many requests" });
+        return;
+      }
+      const parsed = z.object({ text: z.string() }).safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      let text: string;
+      try {
+        text = validateSpeechText(parsed.data.text);
+      } catch (err: any) {
+        sendJson(res, 400, { error: err.message });
+        return;
+      }
+      const outPath = `${tmpdir()}/karen-tts-${Date.now()}.wav`;
+      try {
+        const code = await new Promise<number>((resolve) => {
+          const child = spawn(ttsBinary(), ["-m", ttsModelPath(), "-f", outPath], {
+            stdio: ["pipe", "ignore", "pipe"],
+          });
+          child.stdin.end(text);
+          child.on("error", () => resolve(1));
+          child.on("close", (value) => resolve(value ?? 1));
+        });
+        if (code !== 0) {
+          sendJson(res, 502, { error: "TTS local falhou." });
+          return;
+        }
+        const wav = await readFile(outPath);
+        res.writeHead(200, {
+          "Content-Type": "audio/wav",
+          "Content-Length": wav.length,
+          "Cache-Control": "no-store",
+        });
+        res.end(wav);
+      } catch {
+        sendJson(res, 502, { error: "Falha ao sintetizar localmente." });
+      } finally {
+        await unlink(outPath).catch(() => undefined);
+      }
       return;
     }
 
