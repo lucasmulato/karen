@@ -11,6 +11,7 @@
 import { readFile } from "node:fs/promises";
 import { Client } from "pg";
 import { parseExport } from "../build/services/whatsapp-export.js";
+import { executiveQueue } from "../build/services/executive-queue.js";
 
 const args = process.argv.slice(2);
 const fileIndex = args.indexOf("--file");
@@ -89,5 +90,23 @@ const proposal = {
   note: "Nenhuma escrita no banco. Nenhuma mensagem enviada. Aplicar exige approve explícito.",
   approvalId: `WA-ENGAGE-${new Date().toISOString().slice(0, 10)}`,
 };
+
+if (args.includes("--queue") && !args.includes("--dry-run")) {
+  for (const update of proposal.updates) {
+    try {
+      await executiveQueue.addItem({
+        id: proposal.approvalId,
+        action: `Marcar engaged: ${update.title}`,
+        lead: update.leadId,
+        source: update.source,
+        draft: `Aprovar atualização de ${update.phone} com última interação em ${update.lastSeen}.`,
+        estimateSeconds: 20,
+      });
+    } catch (err) {
+      console.warn(`fila não recebeu item para ${update.leadId}: ${err.message}`);
+    }
+  }
+  proposal.queued = true;
+}
 
 console.log(JSON.stringify(proposal, null, 2));

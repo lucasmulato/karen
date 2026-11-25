@@ -974,6 +974,42 @@ async function handleHttp(
       return;
     }
 
+    // EQ-WA-01: human-approved engagement from a local WhatsApp export.
+    if (req.method === "POST" && /^\/api\/leads\/[\da-f-]+\/engaged$/i.test(path)) {
+      const id = path.split("/")[3];
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      if (isRateLimited(req.socket.remoteAddress ?? "unknown")) {
+        sendJson(res, 429, { error: "Too many requests" });
+        return;
+      }
+      const parsed = z
+        .object({
+          approvalId: z.string().min(8).max(80),
+          lastInteractionAt: z.string().min(10).max(40),
+        })
+        .safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      const approved = (await executiveQueue.readAll()).find(
+        (item) => item.id === parsed.data.approvalId && item.status === "approved"
+      );
+      if (!approved) {
+        sendJson(res, 403, { error: "Aprovação não encontrada ou não aprovada na Fila Executiva." });
+        return;
+      }
+      const row = await leads.markEngaged(id, parsed.data.lastInteractionAt);
+      if (!row) { sendJson(res, 404, { error: "Lead não encontrado ou suprimido" }); return; }
+      if (!brandsForRole(session.role, session.brands).includes(row.brand as Brand)) {
+        sendJson(res, 403, { error: "Sem acesso a essa marca." });
+        return;
+      }
+      sendJson(res, 200, row);
+      return;
+    }
+
     if (req.method === "GET" && path === "/api/garden/data") {
       sendJson(res, 200, await garden.data());
       return;
