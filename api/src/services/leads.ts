@@ -25,6 +25,8 @@ export interface LeadRow {
   maps_url: string | null;
   draft: OutreachDraft;
   suppressed: boolean;
+  status: string;
+  last_interaction_at: string | null;
   created_at: string;
 }
 
@@ -40,7 +42,8 @@ export interface LeadRunResult {
 }
 
 const COLUMNS = `id, brand, place_id, title, phone, address, neighborhood, city,
-  category, rating, reviews_count, website, maps_url, draft, suppressed, created_at`;
+  category, rating, reviews_count, website, maps_url, draft, suppressed, status,
+  last_interaction_at, created_at`;
 
 function mapRow(row: any): LeadRow {
   return {
@@ -59,6 +62,10 @@ function mapRow(row: any): LeadRow {
     maps_url: row.maps_url,
     draft: typeof row.draft === "string" ? JSON.parse(row.draft) : row.draft,
     suppressed: Boolean(row.suppressed),
+    status: String(row.status ?? "pending"),
+    last_interaction_at: row.last_interaction_at
+      ? new Date(row.last_interaction_at).toISOString()
+      : null,
     created_at: row.created_at,
   };
 }
@@ -167,6 +174,20 @@ export class LeadService {
     const res = await this.client.query(
       `UPDATE leads SET suppressed = TRUE WHERE id = $1::uuid RETURNING ${COLUMNS}`,
       [id]
+    );
+    return res.rowCount ? mapRow(res.rows[0]) : null;
+  }
+
+  /** Marks a lead as engaged after a human-approved WhatsApp export match. */
+  async markEngaged(id: string, lastInteractionAt: string): Promise<LeadRow | null> {
+    const when = new Date(lastInteractionAt);
+    if (Number.isNaN(when.getTime())) throw new Error("lastInteractionAt inválido.");
+    const res = await this.client.query(
+      `UPDATE leads
+          SET status = 'engaged', last_interaction_at = $2
+        WHERE id = $1::uuid AND suppressed = FALSE
+        RETURNING ${COLUMNS}`,
+      [id, when.toISOString()]
     );
     return res.rowCount ? mapRow(res.rows[0]) : null;
   }

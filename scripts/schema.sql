@@ -66,7 +66,11 @@ CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at DESC);
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS brand TEXT NOT NULL DEFAULT 'karen';
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS confirmed_by TEXT;
+-- EQ-WA-01: engagement state from local WhatsApp exports (human approved).
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_interaction_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_leads_brand ON leads(brand);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 
 -- 2b-3. Conversation intelligence: a pasted/ingested transcript is classified
 -- (client vs not), then produces a versioned system prompt + final message.
