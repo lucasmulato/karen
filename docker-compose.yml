@@ -40,6 +40,26 @@ services:
       retries: 5
       start_period: 120s
 
+  # DRAFT (EQ-VOICE-01): local STT. Host networking on loopback, no NAT.
+  stt:
+    image: ghcr.io/ggml-org/whisper.cpp:main
+    container_name: karen-stt
+    restart: unless-stopped
+    environment:
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - WHISPER_PORT=${WHISPER_PORT:-9090}
+    entrypoint: ["/bin/bash", "/scripts/entrypoint.sh"]
+    volumes:
+      - whisper_models:/models
+      - ./scripts/whisper-entrypoint.sh:/scripts/entrypoint.sh:ro
+    network_mode: host
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:9090/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
   api:
     build: ./api
     container_name: synapse-vault-api
@@ -76,6 +96,7 @@ services:
 volumes:
   postgres_data:
   ollama_models:
+  whisper_models:
 
 networks:
   karen_internal:

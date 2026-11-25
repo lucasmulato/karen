@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Mic, Volume2 } from 'lucide-react';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -110,6 +111,79 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onGraphChanged, command, mode = '
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+
+  async function toggleRecording() {
+    if (recording) {
+      recorderRef.current?.stop();
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setMessages((m) => [...m, { role: 'assistant', content: 'Gravação não suportada neste navegador.' }]);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        setRecording(false);
+        if (!chunks.length) return;
+        setVoiceBusy(true);
+        try {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          const buffer = await blob.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          let binary = '';
+          for (const byte of bytes) binary += String.fromCharCode(byte);
+          const audio = btoa(binary);
+          const res = await fetch(`${API_BASE}/voice/transcribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audio, mime: 'audio/webm' }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+          if (data.text) setInput((current) => (current ? `${current} ${data.text}` : data.text));
+        } catch (err) {
+          setMessages((m) => [...m, { role: 'assistant', content: `Falha na transcrição: ${err instanceof Error ? err.message : String(err)}` }]);
+        } finally {
+          setVoiceBusy(false);
+        }
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      setMessages((m) => [...m, { role: 'assistant', content: 'Não foi possível acessar o microfone.' }]);
+    }
+  }
+
+  async function speak(text: string) {
+    if (voiceBusy || !text.trim()) return;
+    setVoiceBusy(true);
+    try {
+      const res = await fetch(`${API_BASE}/voice/synthesize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.slice(0, 500) }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => URL.revokeObjectURL(url);
+      await audio.play();
+    } catch {
+      // Silêncio: não interrompe a conversa se o TTS falhar.
+    } finally {
+      setVoiceBusy(false);
+    }
+  }
 
   useEffect(() => {
     fetch(`${API_BASE}/chat/status`)
@@ -232,6 +306,17 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onGraphChanged, command, mode = '
             ) : (
               msg.content
             )}
+            {msg.role === 'assistant' && !msg.diagnosis && msg.content && (
+              <button
+                type="button"
+                onClick={() => void speak(msg.content)}
+                disabled={voiceBusy}
+                title="Ouvir resposta (TTS local)"
+                className="mt-2 inline-flex items-center gap-1 rounded border border-hud-line px-2 py-1 text-[11px] text-hud-muted hover:border-hud-cyan hover:text-hud-cyan disabled:opacity-40"
+              >
+                <Volume2 size={12} /> Ouvir
+              </button>
+            )}
           </div>
         ))}
         {busy && (
@@ -281,6 +366,17 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onGraphChanged, command, mode = '
       </div>
 
       <form onSubmit={send} className="flex shrink-0 gap-2 px-4 py-3 border-t border-zinc-800">
+        <button
+          type="button"
+          onClick={() => void toggleRecording()}
+          disabled={configured !== true || voiceBusy}
+          title={recording ? 'Parar gravação' : 'Falar (STT local)'}
+          className={`inline-flex size-10 shrink-0 items-center justify-center rounded-lg border ${
+            recording ? 'border-hud-danger text-hud-danger' : 'border-hud-line text-hud-muted hover:border-hud-cyan hover:text-hud-cyan'
+          } disabled:opacity-40`}
+        >
+          <Mic size={16} />
+        </button>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
