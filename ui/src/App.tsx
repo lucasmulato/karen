@@ -20,10 +20,12 @@ import {
   Terminal,
   X,
   MessagesSquare,
+  ListChecks,
 } from 'lucide-react';
 import ChatPanel from './components/ChatPanel';
 import OutreachPanel from './components/OutreachPanel';
 import ConversationsPanel from './components/ConversationsPanel';
+import ExecutiveQueuePanel from './components/ExecutiveQueuePanel';
 import LeadsPanel from './components/LeadsPanel';
 import CommandPanel from './components/CommandPanel';
 import HealthStrip from './components/HealthStrip';
@@ -91,6 +93,7 @@ const App: React.FC = () => {
   const [showEva, setShowEva] = useState(false);
   const [showOutreach, setShowOutreach] = useState(false);
   const [showConversations, setShowConversations] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [mode, setMode] = useState<'karen' | 'eva'>('karen');
@@ -174,6 +177,7 @@ const App: React.FC = () => {
         setShowEva(false);
         setShowOutreach(false);
         setShowConversations(false);
+        setShowQueue(false);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -375,13 +379,14 @@ const App: React.FC = () => {
         )
       : undefined;
 
-  function openPane(pane: 'chat' | 'leads' | 'commands' | 'eva' | 'notes' | 'outreach' | 'conversations') {
+  function openPane(pane: 'chat' | 'leads' | 'commands' | 'eva' | 'notes' | 'outreach' | 'conversations' | 'queue') {
     setShowChat(pane === 'chat');
     setShowLeads(pane === 'leads');
     setShowCommands(pane === 'commands');
     setShowEva(pane === 'eva');
     setShowOutreach(pane === 'outreach');
     setShowConversations(pane === 'conversations');
+    setShowQueue(pane === 'queue');
     if (pane === 'notes') setMainView('notes');
     setRevealed(false);
   }
@@ -435,6 +440,7 @@ const App: React.FC = () => {
     } },
     { id: 'outreach', label: 'Mensagens prontas', hint: 'handoff WhatsApp manual', icon: PALETTE_ICONS.leads, run: () => openPane('outreach') },
     { id: 'conversations', label: 'Conversas e entregas críticas', hint: 'prompt de sistema + mensagem', icon: PALETTE_ICONS.eva, run: () => openPane('conversations') },
+    { id: 'queue', label: 'Fila executiva', hint: 'decisões do dia', icon: PALETTE_ICONS.eva, run: () => openPane('queue') },
   ];
 
   const connectBannerText = !connect
@@ -578,6 +584,24 @@ const App: React.FC = () => {
             title="Conversas · prompts e entregas críticas"
           >
             <MessagesSquare size={24} />
+          </button>
+          <button
+            onClick={() => {
+              setShowQueue((v) => !v);
+              setShowChat(false);
+              setShowLeads(false);
+              setShowCommands(false);
+              setShowEva(false);
+              setShowOutreach(false);
+              setShowConversations(false);
+              setSidebarOpen(false);
+            }}
+            className={`p-2 transition-colors ${
+              showQueue ? 'text-cyan-400 bg-zinc-800 rounded-md' : 'text-zinc-500 hover:text-white'
+            }`}
+            title="Fila executiva · decisões do dia"
+          >
+            <ListChecks size={24} />
           </button>
           <button
             onClick={() => setMainView('graph')}
@@ -824,7 +848,7 @@ const App: React.FC = () => {
         )}
         </div>
 
-        {(showChat || showCommands || showLeads || showEva || showOutreach || showConversations) && (
+        {(showChat || showCommands || showLeads || showEva || showOutreach || showConversations || showQueue) && (
           <div
             role="separator"
             aria-orientation="vertical"
@@ -844,7 +868,7 @@ const App: React.FC = () => {
           />
         )}
 
-        {(showChat || showLeads || showCommands || showEva || showOutreach || showConversations) && (
+        {(showChat || showLeads || showCommands || showEva || showOutreach || showConversations || showQueue) && (
           <aside className="w-full @md:w-[var(--chat-width)] h-full shrink-0 border-l border-zinc-800 @md:border-l-0 bg-black">
             {showChat && (
               <WorkspacePane
@@ -903,6 +927,16 @@ const App: React.FC = () => {
                 onClose={() => setShowConversations(false)}
               >
                 <ConversationsPanel />
+              </WorkspacePane>
+            )}
+
+            {showQueue && (
+              <WorkspacePane
+                title="Fila executiva"
+                subtitle="Até 7 decisões · nenhum envio automático"
+                onClose={() => setShowQueue(false)}
+              >
+                <ExecutiveQueuePanel />
               </WorkspacePane>
             )}
 
