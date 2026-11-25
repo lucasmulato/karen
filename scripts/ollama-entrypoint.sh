@@ -9,15 +9,15 @@ OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
 ollama serve &
 SERVER_PID=$!
 
-echo "[llm-engine] waiting for ${OLLAMA_URL}/api/tags"
+echo "[llm-engine] waiting for Ollama API"
 for _ in $(seq 1 60); do
-  if curl -sf "${OLLAMA_URL}/api/tags" >/dev/null 2>&1; then
+  if ollama list >/dev/null 2>&1; then
     break
   fi
   sleep 2
 done
 
-if ! curl -sf "${OLLAMA_URL}/api/tags" >/dev/null 2>&1; then
+if ! ollama list >/dev/null 2>&1; then
   echo "[llm-engine] server did not become ready" >&2
   exit 1
 fi
