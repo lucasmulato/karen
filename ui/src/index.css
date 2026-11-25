@@ -74,6 +74,17 @@ body { margin: 0; }
 }
 .hud-mono { font-family: var(--font-hud-mono); }
 
+/* Shared surfaces for tool panes (Notes hub and children). */
+.hud-surface { @apply bg-hud-panel text-slate-200; }
+.hud-tabbar { @apply flex shrink-0 items-center justify-between border-b border-hud-line bg-hud-panel px-4 py-2; }
+.hud-tab { @apply flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs text-hud-muted transition-colors hover:text-slate-100; }
+.hud-tab-active { @apply bg-hud-raised text-hud-cyan; }
+.hud-card { @apply rounded-lg border border-hud-line bg-hud-raised p-3; }
+.hud-btn { @apply inline-flex items-center gap-1 rounded border border-hud-line px-2.5 py-1 text-[12px] text-slate-300 transition-colors hover:border-hud-cyan hover:text-hud-cyan; }
+.hud-btn-primary { @apply inline-flex items-center gap-1 rounded bg-hud-cyan px-2.5 py-1 text-[12px] font-medium text-hud-bg transition hover:brightness-110; }
+.hud-input { @apply w-full rounded border border-hud-line bg-hud-bg px-3 py-2 text-sm text-slate-200 placeholder:text-hud-muted; }
+.hud-badge { @apply rounded border border-hud-line px-1.5 py-0.5 text-[10px] text-hud-cyan; }
+
 .hud-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
 .hud-scroll::-webkit-scrollbar-thumb {
   background: rgba(34, 211, 238, 0.22);

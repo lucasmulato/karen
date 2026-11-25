@@ -382,59 +382,59 @@ const NotesPanel: React.FC = () => {
   }
 
   return (
-    <div data-color-mode="dark" className="flex h-full w-full flex-col bg-[#1e1e1e] text-zinc-200">
-      <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-4 py-2">
+    <div data-color-mode="dark" className="flex h-full w-full flex-col bg-hud-panel text-slate-200">
+      <div className="flex shrink-0 items-center justify-between border-b border-hud-line px-4 py-2">
         <div className="flex gap-1">
           <button
             onClick={() => changeTab('hub')}
-            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'hub' ? 'bg-zinc-800 text-blue-400' : 'text-zinc-500 hover:text-zinc-200'}`}
+            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'hub' ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:text-slate-200'}`}
           >
             <Home size={14} /> Hub
           </button>
           <button
             onClick={() => changeTab('files')}
-            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'files' ? 'bg-zinc-800 text-blue-400' : 'text-zinc-500 hover:text-zinc-200'}`}
+            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'files' ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:text-slate-200'}`}
           >
             <FileText size={14} /> Arquivos
           </button>
           <button
             onClick={() => changeTab('mapa')}
-            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'mapa' ? 'bg-zinc-800 text-cyan-400' : 'text-zinc-500 hover:text-zinc-200'}`}
+            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'mapa' ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:text-slate-200'}`}
           >
             <Share2 size={14} /> Mapa
           </button>
           <button
             onClick={() => changeTab('projetos')}
-            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'projetos' ? 'bg-zinc-800 text-blue-400' : 'text-zinc-500 hover:text-zinc-200'}`}
+            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'projetos' ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:text-slate-200'}`}
           >
             <Briefcase size={14} /> Projetos
           </button>
           <button
             onClick={() => changeTab('garden')}
-            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'garden' ? 'bg-zinc-800 text-emerald-400' : 'text-zinc-500 hover:text-zinc-200'}`}
+            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'garden' ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:text-slate-200'}`}
           >
             <Leaf size={14} /> Jardim
           </button>
           <button
             onClick={() => changeTab('canvas')}
-            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'canvas' ? 'bg-zinc-800 text-purple-400' : 'text-zinc-500 hover:text-zinc-200'}`}
+            className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs ${tab === 'canvas' ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:text-slate-200'}`}
           >
             <Network size={14} /> Canvas
           </button>
         </div>
         <div className="flex items-center gap-2">
           {tab === 'files' && selected && (
-            <div className="flex overflow-hidden rounded-lg border border-zinc-700">
+            <div className="flex overflow-hidden rounded-lg border border-hud-line">
               <button
                 onClick={() => setReadMode(false)}
-                className={`flex items-center gap-1 px-2 py-1 text-[11px] ${!readMode ? 'bg-zinc-800 text-blue-300' : 'text-zinc-500'}`}
+                className={`flex items-center gap-1 px-2 py-1 text-[11px] ${!readMode ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted'}`}
                 title="Editar"
               >
                 <Pencil size={11} /> Editar
               </button>
               <button
                 onClick={() => setReadMode(true)}
-                className={`flex items-center gap-1 px-2 py-1 text-[11px] ${readMode ? 'bg-zinc-800 text-blue-300' : 'text-zinc-500'}`}
+                className={`flex items-center gap-1 px-2 py-1 text-[11px] ${readMode ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted'}`}
                 title="Ler"
               >
                 <Eye size={11} /> Ler
@@ -452,7 +452,7 @@ const NotesPanel: React.FC = () => {
                   toast('Link da proposta copiado');
                 } else toast('Proposta sem token no frontmatter');
               }}
-              className="flex items-center gap-1 rounded border border-emerald-700 px-2.5 py-1 text-[12px] text-emerald-300 hover:border-emerald-500"
+              className="flex items-center gap-1 rounded border border-hud-ok px-2.5 py-1 text-[12px] text-hud-ok hover:border-hud-ok"
               title="Copiar link público da proposta"
             >
               <Link2 size={12} /> Link público
@@ -462,7 +462,7 @@ const NotesPanel: React.FC = () => {
             <button
               onClick={() => save()}
               disabled={!dirty || saving}
-              className="flex items-center gap-1 rounded bg-blue-600 px-2.5 py-1 text-[12px] text-white disabled:opacity-40"
+              className="flex items-center gap-1 rounded bg-hud-cyan px-2.5 py-1 text-[12px] text-white disabled:opacity-40"
             >
               <Save size={12} /> {saving ? 'Salvando...' : 'Salvar'}
             </button>
@@ -471,7 +471,7 @@ const NotesPanel: React.FC = () => {
       </div>
 
       {error && (
-        <div className="shrink-0 border-b border-red-900/50 bg-red-950/30 px-4 py-2 text-[12px] text-red-300">
+        <div className="shrink-0 border-b border-red-900/50 bg-red-950/30 px-4 py-2 text-[12px] text-hud-danger">
           {error}
         </div>
       )}
@@ -482,26 +482,26 @@ const NotesPanel: React.FC = () => {
             <>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  ['Notas', noteGraph.stats.total, 'text-zinc-100'],
-                  ['Conectadas', noteGraph.stats.linked, 'text-blue-400'],
+                  ['Notas', noteGraph.stats.total, 'text-slate-200'],
+                  ['Conectadas', noteGraph.stats.linked, 'text-hud-cyan'],
                   ['Órfãs', noteGraph.stats.orphan, 'text-amber-400'],
                 ].map(([label, value, color]) => (
-                  <div key={String(label)} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                  <div key={String(label)} className="rounded-lg border border-hud-line bg-hud-raised p-3">
                     <div className={`text-xl font-semibold ${color}`}>{value}</div>
-                    <div className="text-[11px] uppercase tracking-wider text-zinc-500">{label}</div>
+                    <div className="text-[11px] uppercase tracking-wider text-hud-muted">{label}</div>
                   </div>
                 ))}
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
-                    Contexto ativo: <span className="text-blue-400">{activeContext}</span>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-hud-muted">
+                    Contexto ativo: <span className="text-hud-cyan">{activeContext}</span>
                   </p>
                   {(typeFilter || tagFilter || contextFilter) && (
                     <button
                       onClick={() => { setTypeFilter(''); setTagFilter(''); setContextFilter(''); }}
-                      className="text-[11px] text-zinc-500 hover:text-blue-400"
+                      className="text-[11px] text-hud-muted hover:text-hud-cyan"
                     >
                       Limpar filtros
                     </button>
@@ -520,36 +520,36 @@ const NotesPanel: React.FC = () => {
                           body: JSON.stringify({ context: next || 'personal' }),
                         }).then(() => setActiveContext(next || 'personal')).catch(() => {});
                       }}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] ${contextFilter === c.context ? 'border-blue-500 text-blue-400' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] ${contextFilter === c.context ? 'border-hud-cyan text-hud-cyan' : 'border-hud-line text-hud-muted hover:border-hud-cyan'}`}
                       title="Trocar contexto de trabalho da KAREN"
                     >
-                      {c.context} <span className="text-zinc-600">{c.count}</span>
+                      {c.context} <span className="text-hud-muted">{c.count}</span>
                     </button>
                   ))}
                 </div>
-                <p className="pt-1 text-[11px] font-bold uppercase tracking-widest text-zinc-500">Filtrar por tipo</p>
+                <p className="pt-1 text-[11px] font-bold uppercase tracking-widest text-hud-muted">Filtrar por tipo</p>
                 <div className="flex flex-wrap gap-1.5">
                   {noteGraph.stats.types.map((t) => (
                     <button
                       key={t.type}
                       onClick={() => setTypeFilter((v) => (v === t.type ? '' : t.type))}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] ${typeFilter === t.type ? 'border-blue-500 text-blue-400' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] ${typeFilter === t.type ? 'border-hud-cyan text-hud-cyan' : 'border-hud-line text-hud-muted hover:border-hud-cyan'}`}
                     >
-                      {t.type} <span className="text-zinc-600">{t.count}</span>
+                      {t.type} <span className="text-hud-muted">{t.count}</span>
                     </button>
                   ))}
                 </div>
                 {noteGraph.stats.tags.length > 0 && (
                   <>
-                    <p className="pt-1 text-[11px] font-bold uppercase tracking-widest text-zinc-500">Tags</p>
+                    <p className="pt-1 text-[11px] font-bold uppercase tracking-widest text-hud-muted">Tags</p>
                     <div className="flex flex-wrap gap-1.5">
                       {noteGraph.stats.tags.map((t) => (
                         <button
                           key={t.tag}
                           onClick={() => setTagFilter((v) => (v === t.tag ? '' : t.tag))}
-                          className={`rounded-full border px-2.5 py-1 text-[11px] ${tagFilter === t.tag ? 'border-emerald-500 text-emerald-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
+                          className={`rounded-full border px-2.5 py-1 text-[11px] ${tagFilter === t.tag ? 'border-hud-ok text-hud-ok' : 'border-hud-line text-hud-muted hover:border-hud-cyan'}`}
                         >
-                          #{t.tag} <span className="text-zinc-600">{t.count}</span>
+                          #{t.tag} <span className="text-hud-muted">{t.count}</span>
                         </button>
                       ))}
                     </div>
@@ -559,31 +559,31 @@ const NotesPanel: React.FC = () => {
 
               <button
                  onClick={syncGraph}
-                 className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-blue-800 bg-blue-950/30 py-2 text-[12px] text-blue-300 hover:border-blue-500"
+                 className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-hud-cyan bg-blue-950/30 py-2 text-[12px] text-hud-cyan hover:border-hud-cyan"
                >
                  <Network size={13} /> Sincronizar notas com o grafo
                </button>
 
                {noteGraph.stats.mostLinked.some((n) => n.count > 0) && (
                 <section className="space-y-1.5">
-                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-hud-muted">
                     <Link2 size={12} /> Mais conectadas
                   </p>
                   {noteGraph.stats.mostLinked.filter((n) => n.count > 0).map((n) => (
                     <button
                       key={n.path}
                       onClick={() => openFile(n.path)}
-                      className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-left hover:border-blue-600"
+                      className="flex w-full items-center justify-between rounded-lg border border-hud-line bg-hud-raised px-3 py-2 text-left hover:border-hud-cyan"
                     >
-                      <span className="truncate text-xs text-zinc-200">{n.name}</span>
-                      <span className="ml-2 shrink-0 text-[11px] text-blue-400">{n.count} links</span>
+                      <span className="truncate text-xs text-slate-200">{n.name}</span>
+                      <span className="ml-2 shrink-0 text-[11px] text-hud-cyan">{n.count} links</span>
                     </button>
                   ))}
                 </section>
               )}
 
               <section className="space-y-1.5">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Notas</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-hud-muted">Notas</p>
                 {noteGraph.nodes.map((n) => (
                   <div
                     key={n.path}
@@ -591,20 +591,20 @@ const NotesPanel: React.FC = () => {
                     tabIndex={0}
                     onClick={() => openFile(n.path)}
                     onKeyDown={(e) => { if (e.key === 'Enter') openFile(n.path); }}
-                    className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-left hover:border-blue-600"
+                    className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-hud-line bg-hud-raised px-3 py-2 text-left hover:border-hud-cyan"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-xs text-zinc-200">{n.name}</span>
-                      <span className="block text-[11px] text-zinc-600">
+                      <span className="block truncate text-xs text-slate-200">{n.name}</span>
+                      <span className="block text-[11px] text-hud-muted">
                         {n.type} · {n.backlinks.length} backlinks · {n.links.length} links
                       </span>
                     </span>
                     {n.graphId ? (
-                      <span className="shrink-0 rounded border border-emerald-800 px-1.5 py-0.5 text-[10px] text-emerald-400" title="Sincronizada com o grafo">grafo</span>
+                      <span className="shrink-0 rounded border border-hud-ok px-1.5 py-0.5 text-[10px] text-hud-ok" title="Sincronizada com o grafo">grafo</span>
                     ) : (
                       <button
                         onClick={(e) => { e.stopPropagation(); connectNote(n); }}
-                        className="shrink-0 rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
+                        className="shrink-0 rounded border border-hud-line px-1.5 py-0.5 text-[10px] text-hud-muted hover:border-hud-cyan hover:text-hud-cyan"
                         title="Gerar graph_id e conectar ao grafo"
                       >
                         Conectar
@@ -613,34 +613,34 @@ const NotesPanel: React.FC = () => {
                   </div>
                 ))}
                 {noteGraph.nodes.length === 0 && (
-                  <p className="text-xs text-zinc-600">Nenhuma nota com esses filtros.</p>
+                  <p className="text-xs text-hud-muted">Nenhuma nota com esses filtros.</p>
                 )}
               </section>
                <ActivityFeed />
 
             </>
           ) : (
-            <p className="text-xs text-zinc-500">Carregando hub...</p>
+            <p className="text-xs text-hud-muted">Carregando hub...</p>
           )}
         </div>
       )}
 
       {tab === 'files' && (
         <div className="flex min-h-0 flex-1">
-          <aside className="w-52 shrink-0 overflow-y-auto border-r border-zinc-800 bg-[#181818] px-2 py-2">
-            <p className="px-1 pb-2 text-[11px] uppercase tracking-widest text-zinc-600">Vault</p>
+          <aside className="w-52 shrink-0 overflow-y-auto border-r border-hud-line bg-hud-panel px-2 py-2">
+            <p className="px-1 pb-2 text-[11px] uppercase tracking-widest text-hud-muted">Vault</p>
             {files.map((f) => (
               <button
                 key={f}
                 onClick={() => openFile(f)}
-                className={`flex w-full items-center gap-1.5 truncate rounded px-2 py-1 text-left text-[12px] ${selected === f ? 'bg-zinc-800 text-blue-300' : 'text-zinc-400 hover:bg-zinc-900'}`}
+                className={`flex w-full items-center gap-1.5 truncate rounded px-2 py-1 text-left text-[12px] ${selected === f ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:bg-hud-raised'}`}
                 title={f}
               >
                 <FolderOpen size={11} className="shrink-0" />
                 {f}
               </button>
             ))}
-            {files.length === 0 && <p className="px-1 text-[12px] text-zinc-600">Nenhuma nota.</p>}
+            {files.length === 0 && <p className="px-1 text-[12px] text-hud-muted">Nenhuma nota.</p>}
           </aside>
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 overflow-hidden">
@@ -649,10 +649,10 @@ const NotesPanel: React.FC = () => {
                   <MarkdownRead content={content} files={files} onOpen={openFile} />
                 ) : (
                   <div className="flex h-full min-h-0 flex-col">
-                    <div className="flex shrink-0 justify-end border-b border-zinc-800 px-2 py-1">
+                    <div className="flex shrink-0 justify-end border-b border-hud-line px-2 py-1">
                       <button
                         onClick={() => setLinkPicker({ prefix: '', typing: false })}
-                        className="flex items-center gap-1 rounded border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
+                        className="flex items-center gap-1 rounded border border-hud-line px-2 py-0.5 text-[11px] text-hud-muted hover:border-hud-cyan hover:text-hud-cyan"
                         title="Inserir wikilink"
                       >
                         <Link2 size={11} /> Inserir [[link]]
@@ -675,31 +675,31 @@ const NotesPanel: React.FC = () => {
                       />
                     </div>
                     {linkPicker && (
-                      <div className="shrink-0 border-t border-zinc-800 bg-zinc-950 p-2">
+                      <div className="shrink-0 border-t border-hud-line bg-hud-bg p-2">
                         <div className="mb-1 flex items-center justify-between">
-                          <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Inserir link</p>
-                          <button onClick={() => setLinkPicker(null)} className="text-[11px] text-zinc-500 hover:text-white">cancelar</button>
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-hud-muted">Inserir link</p>
+                          <button onClick={() => setLinkPicker(null)} className="text-[11px] text-hud-muted hover:text-white">cancelar</button>
                         </div>
                         <input
                           autoFocus
                           value={linkPicker.prefix}
                           onChange={(e) => setLinkPicker({ ...linkPicker, prefix: e.target.value })}
                           placeholder="nome da nota..."
-                          className="mb-1 w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+                          className="mb-1 w-full rounded border border-hud-line bg-hud-raised px-2 py-1 text-xs text-slate-200"
                         />
                         <div className="max-h-28 overflow-y-auto">
                           {linkSuggestions.map((s) => (
                             <button
                               key={s.path}
                               onClick={() => insertLink(s.name)}
-                              className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-[12px] text-zinc-300 hover:bg-zinc-900"
+                              className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-[12px] text-slate-200 hover:bg-hud-raised"
                             >
                               <span className="truncate">{s.name}</span>
-                              <span className="ml-2 shrink-0 text-[10px] text-zinc-600">{s.path.split('/')[0]}</span>
+                              <span className="ml-2 shrink-0 text-[10px] text-hud-muted">{s.path.split('/')[0]}</span>
                             </button>
                           ))}
                           {linkSuggestions.length === 0 && (
-                            <p className="px-2 py-1 text-[11px] text-zinc-600">Nenhuma nota encontrada.</p>
+                            <p className="px-2 py-1 text-[11px] text-hud-muted">Nenhuma nota encontrada.</p>
                           )}
                         </div>
                       </div>
@@ -707,21 +707,21 @@ const NotesPanel: React.FC = () => {
                   </div>
                 )
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-zinc-600">
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-hud-muted">
                   <FileText size={28} />
                   <p className="text-xs">Selecione uma nota para editar</p>
                 </div>
               )}
             </div>
             {selected && (
-              <div className="shrink-0 border-t border-zinc-800 bg-zinc-950 px-3 py-2">
+              <div className="shrink-0 border-t border-hud-line bg-hud-bg px-3 py-2">
                 <div className="mb-1 flex items-center justify-between">
-                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-hud-muted">
                     Propriedades
                   </p>
                   <button
                     onClick={saveMeta}
-                    className="rounded border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
+                    className="rounded border border-hud-line px-2 py-0.5 text-[11px] text-hud-muted hover:border-hud-cyan hover:text-hud-cyan"
                   >
                     Salvar propriedades
                   </button>
@@ -732,7 +732,7 @@ const NotesPanel: React.FC = () => {
                       <button
                         key={t}
                         onClick={() => { setTagFilter(t); setTab('hub'); }}
-                        className="rounded-full border border-emerald-800 px-2 py-0.5 text-[10px] text-emerald-400 hover:border-emerald-500"
+                        className="rounded-full border border-hud-ok px-2 py-0.5 text-[10px] text-hud-ok hover:border-hud-ok"
                         title={`Filtrar Hub por #${t}`}
                       >
                         #{t}
@@ -741,65 +741,65 @@ const NotesPanel: React.FC = () => {
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="flex flex-col gap-0.5 text-[10px] text-zinc-600">
+                  <label className="flex flex-col gap-0.5 text-[10px] text-hud-muted">
                     Tipo
                     <select
                       value={meta.type}
                       onChange={(e) => setMeta({ ...meta, type: e.target.value })}
-                      className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-1 text-[11px] text-zinc-200"
+                      className="rounded border border-hud-line bg-hud-raised px-1.5 py-1 text-[11px] text-slate-200"
                     >
                       {NOTE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </label>
-                  <label className="flex flex-col gap-0.5 text-[10px] text-zinc-600">
+                  <label className="flex flex-col gap-0.5 text-[10px] text-hud-muted">
                     Maturidade
                     <select
                       value={meta.maturity}
                       onChange={(e) => setMeta({ ...meta, maturity: e.target.value })}
-                      className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-1 text-[11px] text-zinc-200"
+                      className="rounded border border-hud-line bg-hud-raised px-1.5 py-1 text-[11px] text-slate-200"
                     >
                       <option value="seedling">seedling</option>
                       <option value="budding">budding</option>
                       <option value="evergreen">evergreen</option>
                     </select>
                   </label>
-                  <label className="col-span-2 flex flex-col gap-0.5 text-[10px] text-zinc-600">
+                  <label className="col-span-2 flex flex-col gap-0.5 text-[10px] text-hud-muted">
                     Tags (separadas por vírgula)
                     <input
                       value={meta.tags.join(', ')}
                       onChange={(e) => setMeta({ ...meta, tags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })}
-                      className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-1 text-[11px] text-zinc-200"
+                      className="rounded border border-hud-line bg-hud-raised px-1.5 py-1 text-[11px] text-slate-200"
                     />
                   </label>
-                  <label className="col-span-2 flex flex-col gap-0.5 text-[10px] text-zinc-600">
+                  <label className="col-span-2 flex flex-col gap-0.5 text-[10px] text-hud-muted">
                     graph_id (UUID do nó no grafo — vazio = não sincronizar)
                     <input
                       value={meta.graphId}
                       onChange={(e) => setMeta({ ...meta, graphId: e.target.value.trim() })}
                       placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                      className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-1 font-mono text-[11px] text-zinc-200"
+                      className="rounded border border-hud-line bg-hud-raised px-1.5 py-1 font-mono text-[11px] text-slate-200"
                     />
                   </label>
                 </div>
               </div>
             )}
             {selected && (
-              <div className="max-h-36 shrink-0 overflow-y-auto border-t border-zinc-800 bg-zinc-950 px-3 py-2">
-                <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+              <div className="max-h-36 shrink-0 overflow-y-auto border-t border-hud-line bg-hud-bg px-3 py-2">
+                <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-hud-muted">
                   <Link2 size={12} /> Backlinks ({backlinks.length})
                 </p>
                 {backlinks.map((b) => (
                   <button
                     key={b.path}
                     onClick={() => openFile(b.path)}
-                    className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-[12px] text-zinc-300 hover:bg-zinc-900"
+                    className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-[12px] text-slate-200 hover:bg-hud-raised"
                   >
                     <span className="truncate">{b.name}</span>
-                    <span className="ml-2 shrink-0 text-[11px] text-zinc-600">{b.type}</span>
+                    <span className="ml-2 shrink-0 text-[11px] text-hud-muted">{b.type}</span>
                   </button>
                 ))}
                 {backlinks.length === 0 && (
-                  <p className="text-[11px] text-zinc-600">
+                  <p className="text-[11px] text-hud-muted">
                     Nenhuma nota aponta aqui. Use [[Nome da Nota]] em outra nota.
                   </p>
                 )}
@@ -817,14 +817,14 @@ const NotesPanel: React.FC = () => {
               onNodeClick={(node) => openFile(node.id)}
             />
           ) : (
-            <p className="p-4 text-xs text-zinc-500">Carregando mapa de notas...</p>
+            <p className="p-4 text-xs text-hud-muted">Carregando mapa de notas...</p>
           )}
         </div>
       )}
 
       {tab === 'projetos' && (
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-hud-muted">
             Projetos · ordenados por prazo
           </p>
           {projects
@@ -834,18 +834,18 @@ const NotesPanel: React.FC = () => {
               <button
                 key={p.path}
                 onClick={() => openFile(p.path)}
-                className="flex w-full items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-left hover:border-blue-600"
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-hud-line bg-hud-raised px-3 py-2 text-left hover:border-hud-cyan"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-xs text-zinc-200">{p.name}</span>
-                  <span className="block text-[11px] text-zinc-600">
+                  <span className="block truncate text-xs text-slate-200">{p.name}</span>
+                  <span className="block text-[11px] text-hud-muted">
                     {p.context} · {p.status} · {p.deadline || 'sem prazo'}
                   </span>
                 </span>
-                <span className="shrink-0 text-[10px] text-zinc-600">{p.maturity}</span>
+                <span className="shrink-0 text-[10px] text-hud-muted">{p.maturity}</span>
               </button>
             ))}
-          {projects.length === 0 && <p className="text-xs text-zinc-600">Nenhum projeto ainda.</p>}
+          {projects.length === 0 && <p className="text-xs text-hud-muted">Nenhum projeto ainda.</p>}
         </div>
       )}
 
@@ -855,14 +855,14 @@ const NotesPanel: React.FC = () => {
             <>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
-                  ['Total', garden.total, 'text-zinc-200'],
+                  ['Total', garden.total, 'text-slate-200'],
                   ['Seedling', garden.seedling, 'text-lime-400'],
                   ['Budding', garden.budding, 'text-amber-400'],
-                  ['Evergreen', garden.evergreen, 'text-emerald-400'],
+                  ['Evergreen', garden.evergreen, 'text-hud-ok'],
                 ].map(([label, value, color]) => (
-                  <div key={String(label)} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                  <div key={String(label)} className="rounded-lg border border-hud-line bg-hud-raised p-3">
                     <div className={`text-xl font-semibold ${color}`}>{value}</div>
-                    <div className="text-[11px] uppercase tracking-wider text-zinc-600">{label}</div>
+                    <div className="text-[11px] uppercase tracking-wider text-hud-muted">{label}</div>
                   </div>
                 ))}
               </div>
@@ -875,7 +875,7 @@ const NotesPanel: React.FC = () => {
                   <button
                     key={key}
                     onClick={() => setMaturity(key)}
-                    className={`rounded-full border px-3 py-1 text-[12px] ${maturity === key ? 'border-emerald-600 text-emerald-400' : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
+                    className={`rounded-full border px-3 py-1 text-[12px] ${maturity === key ? 'border-hud-ok text-hud-ok' : 'border-hud-line text-hud-muted hover:border-hud-cyan'}`}
                   >
                     {label}
                   </button>
@@ -883,39 +883,39 @@ const NotesPanel: React.FC = () => {
               </div>
               <div className="space-y-2">
                 {visibleNotes.map((n) => (
-                  <div key={n.id} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2">
+                  <div key={n.id} className="flex items-center justify-between gap-3 rounded-lg border border-hud-line bg-hud-raised px-3 py-2">
                     <div className="min-w-0">
-                      <p className="truncate text-xs text-zinc-200">{n.name}</p>
-                      <p className="text-[11px] text-zinc-600">[{n.type}]</p>
+                      <p className="truncate text-xs text-slate-200">{n.name}</p>
+                      <p className="text-[11px] text-hud-muted">[{n.type}]</p>
                     </div>
                     <button
                       onClick={() => openFromNode(n.name)}
-                      className="shrink-0 rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-400 hover:border-blue-500 hover:text-blue-400"
+                      className="shrink-0 rounded border border-hud-line px-2 py-1 text-[11px] text-hud-muted hover:border-hud-cyan hover:text-hud-cyan"
                     >
                       Abrir / criar
                     </button>
                   </div>
                 ))}
                 {visibleNotes.length === 0 && (
-                  <p className="text-xs text-zinc-600">Nada nesta categoria 🎉</p>
+                  <p className="text-xs text-hud-muted">Nada nesta categoria 🎉</p>
                 )}
               </div>
-              <p className="text-[11px] text-zinc-600">
+              <p className="text-[11px] text-hud-muted">
                 Custo: US$ 0,00 · dados locais do grafo
               </p>
             </>
           ) : (
-            <p className="text-xs text-zinc-500">Carregando jardim...</p>
+            <p className="text-xs text-hud-muted">Carregando jardim...</p>
           )}
         </div>
       )}
 
       {tab === 'canvas' && (
-        <div className="min-h-0 flex-1 bg-[#0e0e0e]">
+        <div className="min-h-0 flex-1 bg-hud-panel">
           {canvas ? (
             <CanvasView canvas={canvas} />
           ) : (
-            <p className="p-4 text-xs text-zinc-500">Carregando canvas...</p>
+            <p className="p-4 text-xs text-hud-muted">Carregando canvas...</p>
           )}
         </div>
       )}

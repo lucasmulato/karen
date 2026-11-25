@@ -264,6 +264,22 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onGraphChanged, command, mode = '
         </button>
       </div>
 
+      <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto px-4 pb-1">
+        <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-hud-muted">feedback</span>
+        {(['util', 'aprofunde', 'aplique', 'arquive'] as const).map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            onClick={() => submit(`registre feedback: ${kind}`)}
+            disabled={busy || configured !== true}
+            title={`Registrar feedback: ${kind}`}
+            className="shrink-0 rounded-full border border-hud-line px-2.5 py-1 text-[11px] text-hud-muted transition-colors hover:border-hud-cyan hover:text-hud-cyan disabled:opacity-40"
+          >
+            {kind}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={send} className="flex shrink-0 gap-2 px-4 py-3 border-t border-zinc-800">
         <input
           value={input}

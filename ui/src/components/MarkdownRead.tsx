@@ -35,7 +35,7 @@ const MarkdownRead: React.FC<MarkdownReadProps> = ({ content, files, onOpen }) =
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-      <div className="text-sm leading-relaxed text-zinc-300 [&_a]:text-blue-400 [&_a]:underline [&_code]:rounded [&_code]:bg-zinc-800 [&_code]:px-1 [&_h1]:mb-3 [&_h1]:text-xl [&_h1]:font-semibold [&_h1]:text-zinc-100 [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-zinc-200 [&_li]:ml-4 [&_li]:list-disc [&_p]:mb-3 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:bg-black/60 [&_pre]:p-3">
+      <div className="text-sm leading-relaxed text-slate-200 [&_a]:text-hud-cyan [&_a]:underline [&_code]:rounded [&_code]:bg-hud-raised [&_code]:px-1 [&_h1]:mb-3 [&_h1]:text-xl [&_h1]:font-semibold [&_h1]:text-slate-200 [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-slate-200 [&_li]:ml-4 [&_li]:list-disc [&_p]:mb-3 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:bg-black/60 [&_pre]:p-3">
         <ReactMarkdown
           components={{
             a: ({ href, children }) => {
@@ -43,7 +43,7 @@ const MarkdownRead: React.FC<MarkdownReadProps> = ({ content, files, onOpen }) =
                 return (
                   <button
                     onClick={() => onOpen(decodeURIComponent(href.slice(5)))}
-                    className="rounded bg-blue-950/60 px-1 text-blue-300 underline decoration-blue-700 hover:text-blue-200"
+                    className="rounded bg-blue-950/60 px-1 text-hud-cyan underline decoration-blue-700 hover:text-hud-cyan"
                   >
                     {children}
                   </button>
