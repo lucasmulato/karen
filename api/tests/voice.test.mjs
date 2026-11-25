@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { decodeAudio, MAX_AUDIO_BYTES, sttEndpoint, ttsModelPath, validateSpeechText } from "../build/services/voice.js";
+import { decodeAudio, MAX_AUDIO_BYTES, needsWavConversion, sttEndpoint, ttsModelPath, validateSpeechText } from "../build/services/voice.js";
 
 test("decodes valid base64 audio and rejects junk", () => {
   const bytes = Buffer.from("RIFFfakeaudio");
@@ -15,6 +15,14 @@ test("enforces audio and text limits", () => {
   assert.throws(() => decodeAudio(tooBig), /3 MB/);
   assert.equal(validateSpeechText("  olá  "), "olá");
   assert.throws(() => validateSpeechText("a".repeat(501)), /500/);
+});
+
+test("only WAV audio is sent to whisper without conversion", () => {
+  assert.equal(needsWavConversion("audio/wav"), false);
+  assert.equal(needsWavConversion("audio/x-wav"), false);
+  assert.equal(needsWavConversion("audio/webm"), true);
+  assert.equal(needsWavConversion("audio/ogg;codecs=opus"), true);
+  assert.equal(needsWavConversion(undefined), true);
 });
 
 test("endpoints default to local-only", () => {

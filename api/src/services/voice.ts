@@ -20,6 +20,13 @@ export function validateSpeechText(text: unknown): string {
   return value;
 }
 
+/** whisper.cpp only decodes WAV; browser recordings (webm/ogg) need conversion. */
+export function needsWavConversion(mime?: string): boolean {
+  const value = String(mime ?? "").toLowerCase();
+  if (!value) return true;
+  return !value.includes("wav") && !value.includes("x-wav") && !value.includes("wave");
+}
+
 export function sttEndpoint(): string {
   return process.env.KAREN_STT_URL ?? "http://127.0.0.1:9090/inference";
 }

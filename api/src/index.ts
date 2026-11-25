@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
 import {
   decodeAudio,
+  needsWavConversion,
   sttEndpoint,
   ttsBinary,
   ttsModelPath,
@@ -1326,15 +1327,48 @@ async function handleHttp(
         sendJson(res, 400, { error: err.message });
         return;
       }
-      const tempPath = `${tmpdir()}/karen-voice-${Date.now()}.wav`;
+      const stamp = Date.now();
+      const rawPath = `${tmpdir()}/karen-voice-raw-${stamp}.bin`;
+      const wavPath = `${tmpdir()}/karen-voice-${stamp}.wav`;
+      let payload = buffer;
       try {
-        await writeFile(tempPath, buffer);
+        await writeFile(rawPath, buffer);
+        if (needsWavConversion(parsed.data.mime)) {
+          // whisper.cpp decodes WAV only; browser MediaRecorder emits webm/ogg.
+          const converted = await new Promise<boolean>((resolve) => {
+            const child = spawn(
+              process.env.KAREN_FFMPEG ?? "ffmpeg",
+              [
+                "-y",
+                "-loglevel",
+                "error",
+                "-i",
+                rawPath,
+                "-t",
+                "60",
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                "-c:a",
+                "pcm_s16le",
+                wavPath,
+              ],
+              { stdio: "ignore" }
+            );
+            child.on("error", () => resolve(false));
+            child.on("close", (code) => resolve(code === 0));
+          });
+          if (!converted) {
+            sendJson(res, 502, {
+              error: "Falha ao converter o áudio para WAV. Verifique se o ffmpeg está disponível.",
+            });
+            return;
+          }
+          payload = await readFile(wavPath);
+        }
         const form = new FormData();
-        form.append(
-          "file",
-          new Blob([new Uint8Array(buffer)], { type: parsed.data.mime ?? "audio/wav" }),
-          "audio.wav"
-        );
+        form.append("file", new Blob([new Uint8Array(payload)], { type: "audio/wav" }), "audio.wav");
         form.append("response_format", "json");
         form.append("language", "pt");
         const response = await fetch(sttEndpoint(), {
@@ -1352,7 +1386,8 @@ async function handleHttp(
       } catch {
         sendJson(res, 502, { error: "Falha ao transcrever localmente." });
       } finally {
-        await unlink(tempPath).catch(() => undefined);
+        await unlink(rawPath).catch(() => undefined);
+        await unlink(wavPath).catch(() => undefined);
       }
       return;
     }
