@@ -28,6 +28,7 @@ import { DiagnosisService, formatDiagnosis } from "./services/diagnosis.js";
 import { BriefService } from "./services/brief.js";
 import { OutreachService, STATUSES } from "./services/outreach.js";
 import { fastPath } from "./services/fastpath.js";
+import { executiveQueue, MAX_ITEMS } from "./services/executive-queue.js";
 import { ConversationService } from "./services/conversation.js";
 import {
   brandsForRole,
@@ -999,6 +1000,49 @@ async function handleHttp(
 
     if (req.method === "GET" && path === "/api/dashboard/queue") {
       sendJson(res, 200, await queue.attention());
+      return;
+    }
+
+    // --- Executive Queue (Fase 5): at most 7 drafts awaiting a human --------
+    if (req.method === "GET" && path === "/api/executive-queue") {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      const items = await executiveQueue.readAll();
+      sendJson(res, 200, {
+        items,
+        max: MAX_ITEMS,
+        readingTimeSeconds: executiveQueue.readingTimeSeconds(items),
+      });
+      return;
+    }
+
+    if (req.method === "POST" && /^\/api\/executive-queue\/[\w-]+\/decide$/.test(path)) {
+      const session = await auth.session(req);
+      if (!session) { sendJson(res, 401, { error: "Não autenticado" }); return; }
+      if (isRateLimited(req.socket.remoteAddress ?? "unknown")) {
+        sendJson(res, 429, { error: "Too many requests" });
+        return;
+      }
+      const id = path.split("/")[3];
+      const parsed = z
+        .object({
+          decision: z.enum(["approve", "edit", "skip"]),
+          editedDraft: z.string().max(4000).optional(),
+        })
+        .safeParse(await readBody(req));
+      if (!parsed.success) {
+        sendJson(res, 400, { error: z.prettifyError(parsed.error) });
+        return;
+      }
+      const item = await executiveQueue.decide(
+        id,
+        parsed.data.decision,
+        undefined,
+        parsed.data.editedDraft
+      );
+      if (!item) { sendJson(res, 404, { error: "Item não encontrado ou já decidido" }); return; }
+      // Aprovar apenas registra a decisão — nunca envia mensagem alguma.
+      sendJson(res, 200, { item, note: "Nenhum envio foi realizado." });
       return;
     }
 
