@@ -9,7 +9,8 @@ Hands-free sem nuvem: microfone → STT local → KAREN → TTS local → alto-f
 ## Componentes propostos (internos, sem portas publicadas)
 
 - `stt`: whisper.cpp ou faster-whisper com API compatível; modelo small/base em CPU.
-- `tts`: Piper (GPL-3.0) ou Kokoro (licença a verificar); decidir antes de aplicar.
+- `tts`: Piper com voz **Cori en_GB High (MIT, feminina)**; saída falada em inglês.
+- `stt`: o navegador grava webm; o gateway converte para WAV 16 kHz mono com `ffmpeg` antes do whisper.cpp.
 - Ambos em `docker-compose` com `expose`, rede interna `karen_internal`.
 
 ## Endpoints (propostos)
