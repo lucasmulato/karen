@@ -23,22 +23,22 @@ services:
     container_name: karen-llm-engine
     restart: unless-stopped
     environment:
-      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_HOST=127.0.0.1:11434
+      - OLLAMA_GO_TEMPLATE=false
       - MODEL_NAME=${LLM_MODEL:-qwen3:4b}
     entrypoint: ["/bin/bash", "/scripts/entrypoint.sh"]
     volumes:
       - ollama_models:/root/.ollama
       - ./scripts/ollama-entrypoint.sh:/scripts/entrypoint.sh:ro
-    expose:
-      - "11434"
+    # Host networking with loopback bind: no NAT/DNAT required, and the API
+    # (systemd on the host) reaches 127.0.0.1:11434. Not publicly exposed.
+    network_mode: host
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 120s
-    networks:
-      - karen_internal
 
   api:
     build: ./api
