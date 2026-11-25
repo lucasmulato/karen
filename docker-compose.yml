@@ -17,6 +17,29 @@ services:
       timeout: 5s
       retries: 5
 
+  # DRAFT (EQ-LLM-01): local LLM, internal network only, no host port publish.
+  llm-engine:
+    image: ollama/ollama:latest
+    container_name: karen-llm-engine
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - MODEL_NAME=${LLM_MODEL:-qwen3:4b}
+    entrypoint: ["/bin/bash", "/scripts/entrypoint.sh"]
+    volumes:
+      - ollama_models:/root/.ollama
+      - ./scripts/ollama-entrypoint.sh:/scripts/entrypoint.sh:ro
+    expose:
+      - "11434"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - karen_internal
+
   api:
     build: ./api
     container_name: synapse-vault-api
@@ -25,9 +48,11 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/synapsevault
       - LLM_API_KEY=${LLM_API_KEY:-local}
-      # For Docker, llama.cpp must listen on 0.0.0.0 (not 127.0.0.1).
-      - LLM_BASE_URL=${LLM_BASE_URL:-http://host.docker.internal:8080/v1}
-      - LLM_MODEL=${LLM_MODEL:-jarvis}
+      # Draft: default to the internal llm-engine service. To keep using the
+      # host llama.cpp, set LLM_BASE_URL=http://host.docker.internal:8080/v1
+      # in the env file. No production change until EQ-LLM-01 is approved.
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://llm-engine:11434/v1}
+      - LLM_MODEL=${LLM_MODEL:-qwen3:4b}
       - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-@cf/baai/bge-m3}
@@ -37,6 +62,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - karen_internal
 
   ui:
     build: ./ui
@@ -48,3 +75,8 @@ services:
 
 volumes:
   postgres_data:
+  ollama_models:
+
+networks:
+  karen_internal:
+    driver: bridge
