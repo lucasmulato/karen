@@ -5,7 +5,7 @@ const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
 type Decision = 'approve' | 'edit' | 'skip';
 
-interface QueueItem {
+export interface QueueItem {
   id: string;
   action: string;
   lead: string;
@@ -22,7 +22,11 @@ interface Queue {
   readingTimeSeconds: number;
 }
 
-const ExecutiveQueuePanel: React.FC = () => {
+interface ExecutiveQueuePanelProps {
+  onSelectItem?: (item: QueueItem) => void;
+}
+
+const ExecutiveQueuePanel: React.FC<ExecutiveQueuePanelProps> = ({ onSelectItem }) => {
   const [queue, setQueue] = useState<Queue | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -93,7 +97,16 @@ const ExecutiveQueuePanel: React.FC = () => {
         {queue?.items.map((item) => (
           <article key={item.id} className="hud-card space-y-2">
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
+              <div
+                className="min-w-0 cursor-pointer"
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectItem?.(item)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') onSelectItem?.(item);
+                }}
+                title="Ver no Inspector"
+              >
                 <p className="text-xs font-medium text-slate-200">{item.action}</p>
                 <p className="hud-mono text-[10px] text-hud-muted">
                   {item.lead} · {item.source} · {item.estimateSeconds}s

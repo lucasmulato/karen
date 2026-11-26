@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { FileText, Network, X } from 'lucide-react';
+import { FileText, ListChecks, MapPin, Network, X } from 'lucide-react';
 import { useGraph } from './providers/graphContext';
 import { useWorkspace } from './providers/workspaceContext';
 
@@ -103,6 +103,34 @@ const Inspector: React.FC = () => {
               className="hud-btn w-full justify-center"
             >
               Abrir nota
+            </button>
+          </div>
+        ) : selection?.kind === 'lead' ? (
+          <div className="hud-card space-y-2">
+            <MapPin size={16} className="text-hud-cyan" />
+            <p className="hud-label">Lead selecionado</p>
+            <p className="text-sm text-hud-text">{selection.label ?? selection.id}</p>
+            {selection.detail && <p className="text-xs text-hud-muted">{selection.detail}</p>}
+            <button
+              type="button"
+              onClick={() => openTab('leads')}
+              className="hud-btn w-full justify-center"
+            >
+              Abrir Leads
+            </button>
+          </div>
+        ) : selection?.kind === 'queue' ? (
+          <div className="hud-card space-y-2">
+            <ListChecks size={16} className="text-hud-warning" />
+            <p className="hud-label">Item da fila</p>
+            <p className="text-sm text-hud-text">{selection.label ?? selection.id}</p>
+            {selection.detail && <p className="text-xs leading-relaxed text-hud-muted">{selection.detail}</p>}
+            <button
+              type="button"
+              onClick={() => openTab('queue')}
+              className="hud-btn w-full justify-center"
+            >
+              Abrir fila executiva
             </button>
           </div>
         ) : (

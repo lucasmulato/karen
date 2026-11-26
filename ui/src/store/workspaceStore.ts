@@ -10,6 +10,8 @@ export type TabKind =
   | 'note'
   | 'graph'
   | 'mapa'
+  | 'projetos'
+  | 'jardim'
   | 'chat'
   | 'leads'
   | 'outreach'

@@ -7,6 +7,8 @@ export const TAB_LABELS: Record<TabKind, string> = {
   note: 'Nota',
   graph: 'Grafo',
   mapa: 'Mapa',
+  projetos: 'Projetos',
+  jardim: 'Jardim',
   chat: 'Chat',
   leads: 'Leads',
   outreach: 'Mensagens',
@@ -27,8 +29,8 @@ export interface AttentionItem {
 export type WorkspaceSelection =
   | { kind: 'note'; path: string }
   | { kind: 'node'; id: string; name?: string }
-  | { kind: 'lead'; id: string }
-  | { kind: 'queue'; id: string };
+  | { kind: 'lead'; id: string; label?: string; detail?: string }
+  | { kind: 'queue'; id: string; label?: string; detail?: string };
 
 export interface WorkspaceContextValue {
   state: WorkspaceState;

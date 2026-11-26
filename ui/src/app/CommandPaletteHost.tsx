@@ -19,6 +19,7 @@ const CommandPaletteHost: React.FC = () => {
     toggleMode,
     runChatCommand,
     attention,
+    select,
     splitWith,
     closeSplit,
     toggleSplitOrientation,
@@ -38,8 +39,8 @@ const CommandPaletteHost: React.FC = () => {
       { id: 'commands', label: 'Comandos', hint: 'allowlist', group: 'Abrir', icon: PALETTE_ICONS.commands, run: () => openTab('commands') },
       { id: 'eva', label: 'Painel EVA', hint: 'co-sócia', group: 'Abrir', icon: PALETTE_ICONS.eva, run: () => openTab('eva') },
       { id: 'mapa', label: 'Mapa de notas', group: 'Abrir', icon: PALETTE_ICONS.mapa, run: () => openTab('mapa') },
-      { id: 'projetos', label: 'Projetos', group: 'Abrir', icon: PALETTE_ICONS.projetos, run: () => openTab('mapa') },
-      { id: 'jardim', label: 'Jardim', group: 'Abrir', icon: PALETTE_ICONS.garden, run: () => openTab('hub') },
+      { id: 'projetos', label: 'Projetos', group: 'Abrir', icon: PALETTE_ICONS.projetos, run: () => openTab('projetos') },
+      { id: 'jardim', label: 'Jardim', group: 'Abrir', icon: PALETTE_ICONS.garden, run: () => openTab('jardim') },
       { id: 'canvas', label: 'Canvas', group: 'Abrir', icon: PALETTE_ICONS.canvas, run: () => openTab('canvas') },
       {
         id: 'mode',
@@ -195,13 +196,19 @@ const CommandPaletteHost: React.FC = () => {
           group: 'Atenção',
           icon: PALETTE_ICONS.eva,
           run: () => {
+            select({
+              kind: 'queue',
+              id: item.topic,
+              label: item.label,
+              detail: item.detail,
+            });
             openTab('queue');
           },
         });
       }
       return results;
     },
-    [openTab, openNote, graph, attention]
+    [openTab, openNote, graph, attention, select]
   );
 
   return (

@@ -1,6 +1,8 @@
 import React from 'react';
 import {
+  Briefcase,
   FileText,
+  Leaf,
   ListChecks,
   Map,
   MapPin,
@@ -48,6 +50,8 @@ const GROUPS: { title: string; items: RailItem[] }[] = [
     title: 'Sistema',
     items: [
       { kind: 'mapa', label: 'Mapa', icon: Map },
+      { kind: 'projetos', label: 'Projetos', icon: Briefcase },
+      { kind: 'jardim', label: 'Jardim', icon: Leaf },
       { kind: 'canvas', label: 'Canvas', icon: FileText },
     ],
   },

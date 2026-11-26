@@ -18,7 +18,7 @@ interface Draft {
   followUp: string;
 }
 
-interface Lead {
+export interface Lead {
   id: string;
   title: string;
   phone: string | null;
@@ -92,7 +92,11 @@ function toCsv(leads: Lead[]): string {
   return rows.join('\n');
 }
 
-const LeadsPanel: React.FC = () => {
+interface LeadsPanelProps {
+  onSelectLead?: (lead: Lead) => void;
+}
+
+const LeadsPanel: React.FC<LeadsPanelProps> = ({ onSelectLead }) => {
   const [status, setStatus] = useState<Status | null>(null);
   const [query, setQuery] = useState(DEFAULTS.query);
   const [location, setLocation] = useState(DEFAULTS.location);
@@ -356,7 +360,16 @@ const LeadsPanel: React.FC = () => {
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onSelectLead?.(lead)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') onSelectLead?.(lead);
+                    }}
+                    className="cursor-pointer"
+                    title="Ver no Inspector"
+                  >
                     <div className="font-medium text-sm text-zinc-100">{lead.title}</div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[12px] text-zinc-500">
                       {lead.phone ? (
