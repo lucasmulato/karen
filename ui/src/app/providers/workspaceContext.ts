@@ -43,6 +43,8 @@ export interface WorkspaceContextValue {
   toggleRail: () => void;
   toggleInspector: () => void;
   toggleStatusFooter: () => void;
+  highContrast: boolean;
+  toggleContrast: () => void;
   splitWith: (tabId?: string) => void;
   closeSplit: () => void;
   toggleSplitOrientation: () => void;

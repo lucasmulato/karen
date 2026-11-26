@@ -13,7 +13,7 @@ const Inspector: React.FC = () => {
   return (
     <aside
       aria-label="Inspector"
-      className="relative flex shrink-0 flex-col border-l border-hud-border bg-hud-panel/80"
+      className="workspace-inspector relative flex shrink-0 flex-col border-l border-hud-border bg-hud-panel/80"
       style={{ width: state.inspectorWidth }}
     >
       <div

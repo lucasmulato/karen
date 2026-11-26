@@ -12,9 +12,11 @@ interface Item {
 interface Props {
   /** When supplied by the workspace shell, this component does not poll. */
   items?: Item[];
+  /** Gentle attention pulse (respects prefers-reduced-motion). */
+  pulse?: boolean;
 }
 
-const AttentionBadge: React.FC<Props> = ({ items: supplied }) => {
+const AttentionBadge: React.FC<Props> = ({ items: supplied, pulse = false }) => {
   const [items, setItems] = useState<Item[]>([]);
   const [open, setOpen] = useState(false);
   const shown = supplied ?? items;
@@ -36,11 +38,21 @@ const AttentionBadge: React.FC<Props> = ({ items: supplied }) => {
     return () => window.clearInterval(timer);
   }, [load, supplied]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   return (
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${
+        aria-expanded={open}
+        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${pulse ? 'hud-pulse' : ''} ${
           shown.length
             ? 'border-amber-700 bg-amber-950/40 text-amber-300'
             : 'border-zinc-700 text-zinc-500'

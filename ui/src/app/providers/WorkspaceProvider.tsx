@@ -157,6 +157,8 @@ const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       toggleRail: () => dispatch({ type: 'set-rail', collapsed: !state.railCollapsed }),
       toggleInspector: () => dispatch({ type: 'toggle-inspector' }),
       toggleStatusFooter: () => dispatch({ type: 'toggle-status-footer' }),
+      highContrast: state.highContrast,
+      toggleContrast: () => dispatch({ type: 'toggle-contrast' }),
       splitWith,
       closeSplit,
       toggleSplitOrientation,

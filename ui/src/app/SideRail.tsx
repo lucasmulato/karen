@@ -63,7 +63,7 @@ const SideRail: React.FC = () => {
   return (
     <nav
       aria-label="Navegação do workspace"
-      className={`hud-scroll flex shrink-0 flex-col overflow-y-auto border-r border-hud-border bg-hud-panel/70 p-2 transition-[width] duration-150 ${
+      className={`workspace-siderail hud-scroll flex shrink-0 flex-col overflow-y-auto border-r border-hud-border bg-hud-panel/70 p-2 transition-[width] duration-150 ${
         state.railCollapsed ? 'w-12' : 'w-16'
       }`}
     >

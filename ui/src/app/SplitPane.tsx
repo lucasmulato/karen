@@ -26,7 +26,7 @@ const SplitPane: React.FC<Props> = ({ first, second, orientation, ratio, onRatio
   return (
     <div
       ref={container}
-      className={`flex h-full w-full min-h-0 min-w-0 ${vertical ? 'flex-col' : 'flex-row'}`}
+      className={`workspace-split flex h-full w-full min-h-0 min-w-0 ${vertical ? 'flex-col' : 'flex-row'}`}
     >
       <div className="min-h-0 min-w-0 overflow-hidden" style={{ flexBasis: `${ratio}%` }}>
         {first}
@@ -35,6 +35,9 @@ const SplitPane: React.FC<Props> = ({ first, second, orientation, ratio, onRatio
         role="separator"
         aria-orientation={vertical ? 'horizontal' : 'vertical'}
         aria-label="Redimensionar divisão"
+        aria-valuemin={25}
+        aria-valuemax={75}
+        aria-valuenow={ratio}
         tabIndex={0}
         onPointerDown={(event) => {
           event.preventDefault();

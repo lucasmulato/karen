@@ -1,5 +1,5 @@
 import React from 'react';
-import { Columns2, PanelBottom, PanelRight, Rows2, Search } from 'lucide-react';
+import { Columns2, Contrast, PanelBottom, PanelRight, Rows2, Search } from 'lucide-react';
 import AttentionBadge from '../components/AttentionBadge';
 import HealthStrip from '../components/HealthStrip';
 import { useWorkspace } from './providers/workspaceContext';
@@ -9,6 +9,8 @@ const TopBar: React.FC = () => {
     state,
     toggleInspector,
     toggleStatusFooter,
+    highContrast,
+    toggleContrast,
     toggleMode,
     mode,
     attention,
@@ -45,7 +47,7 @@ const TopBar: React.FC = () => {
 
       <div className="hidden items-center gap-2 sm:flex">
         <HealthStrip />
-        <AttentionBadge items={attention} />
+        <AttentionBadge items={attention} pulse={attention.length > 0} />
       </div>
 
       <div className="ml-auto flex items-center gap-1">
@@ -80,6 +82,17 @@ const TopBar: React.FC = () => {
         )}
         <button
           type="button"
+          onClick={toggleContrast}
+          aria-pressed={highContrast}
+          title="Alternar alto contraste"
+          className={`rounded p-1.5 transition-colors ${
+            highContrast ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:text-hud-cyan'
+          }`}
+        >
+          <Contrast size={15} />
+        </button>
+        <button
+          type="button"
           onClick={toggleInspector}
           aria-pressed={state.inspectorOpen}
           title="Alternar Inspector"
@@ -100,7 +113,7 @@ const TopBar: React.FC = () => {
         >
           <PanelBottom size={15} />
         </button>
-        <a href={window.location.pathname} className="hud-btn ml-1" title="Voltar à interface clássica">
+        <a href={`${window.location.pathname}?classic=1`} className="hud-btn ml-1" title="Abrir interface clássica">
           Clássico
         </a>
       </div>

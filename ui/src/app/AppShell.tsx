@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import CommandPaletteHost from './CommandPaletteHost';
 import Inspector from './Inspector';
+import MobileNav from './MobileNav';
 import SideRail from './SideRail';
 import StatusFooter from './StatusFooter';
 import TabBar from './TabBar';
@@ -10,7 +11,7 @@ import GraphProvider from './providers/GraphProvider';
 import { useWorkspace } from './providers/workspaceContext';
 
 const Shell: React.FC = () => {
-  const { state, setPaletteOpen, focusTab, closeTab, openTab } = useWorkspace();
+  const { state, highContrast, setPaletteOpen, focusTab, closeTab, openTab } = useWorkspace();
   const deepLinked = useRef(false);
 
   useEffect(() => {
@@ -66,7 +67,10 @@ const Shell: React.FC = () => {
   }, [state.openTabs, state.activeTabId, setPaletteOpen, focusTab, closeTab]);
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-hud-bg text-hud-text">
+    <div
+      data-contrast={highContrast ? 'high' : undefined}
+      className="flex h-screen w-full flex-col overflow-hidden bg-hud-bg text-hud-text"
+    >
       <TopBar />
       <div className="flex min-h-0 flex-1">
         <SideRail />
@@ -79,6 +83,7 @@ const Shell: React.FC = () => {
         </div>
         <Inspector />
       </div>
+      <MobileNav />
       <CommandPaletteHost />
     </div>
   );

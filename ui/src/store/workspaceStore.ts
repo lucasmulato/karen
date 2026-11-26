@@ -41,6 +41,7 @@ export interface WorkspaceState {
   inspectorOpen: boolean;
   inspectorWidth: number;
   statusFooterOpen: boolean;
+  highContrast: boolean;
 }
 
 export type WorkspaceAction =
@@ -55,7 +56,8 @@ export type WorkspaceAction =
   | { type: 'toggle-status-footer' }
   | { type: 'set-split-secondary'; id: string | null }
   | { type: 'set-split-orientation'; orientation: 'horizontal' | 'vertical' }
-  | { type: 'set-split-ratio'; ratio: number };
+  | { type: 'set-split-ratio'; ratio: number }
+  | { type: 'toggle-contrast' };
 
 const STORAGE_KEY = 'karen-workspace-v1';
 const LEGACY_KEY = 'karen-pane-width';
@@ -85,6 +87,7 @@ export function defaultState(): WorkspaceState {
     inspectorOpen: false,
     inspectorWidth: 320,
     statusFooterOpen: false,
+    highContrast: false,
   };
 }
 
@@ -129,6 +132,7 @@ export function loadState(): WorkspaceState {
       inspectorOpen: Boolean(parsed.inspectorOpen),
       inspectorWidth: clamp(parsed.inspectorWidth, 220, 480, 320),
       statusFooterOpen: Boolean(parsed.statusFooterOpen),
+      highContrast: Boolean(parsed.highContrast),
     };
   } catch {
     return defaultState();
@@ -224,6 +228,8 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         ...state,
         split: { ...state.split, ratio: clamp(action.ratio, 25, 75, 50) },
       };
+    case 'toggle-contrast':
+      return { ...state, highContrast: !state.highContrast };
     default:
       return state;
   }
