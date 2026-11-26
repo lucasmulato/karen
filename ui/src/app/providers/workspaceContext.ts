@@ -18,6 +18,18 @@ export const TAB_LABELS: Record<TabKind, string> = {
   search: 'Busca',
 };
 
+export interface AttentionItem {
+  topic: string;
+  label: string;
+  detail: string;
+}
+
+export type WorkspaceSelection =
+  | { kind: 'note'; path: string }
+  | { kind: 'node'; id: string; name?: string }
+  | { kind: 'lead'; id: string }
+  | { kind: 'queue'; id: string };
+
 export interface WorkspaceContextValue {
   state: WorkspaceState;
   dispatch: Dispatch<WorkspaceAction>;
@@ -29,6 +41,19 @@ export interface WorkspaceContextValue {
   toggleRail: () => void;
   toggleInspector: () => void;
   toggleStatusFooter: () => void;
+  splitWith: (tabId?: string) => void;
+  closeSplit: () => void;
+  toggleSplitOrientation: () => void;
+  paletteOpen: boolean;
+  setPaletteOpen: (open: boolean) => void;
+  mode: 'karen' | 'eva';
+  toggleMode: () => Promise<void>;
+  attention: AttentionItem[];
+  selection: WorkspaceSelection | null;
+  select: (selection: WorkspaceSelection | null) => void;
+  openNote: (path: string) => void;
+  chatCommand: { id: number; text: string } | null;
+  runChatCommand: (text: string) => void;
 }
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);

@@ -33,8 +33,8 @@ export interface WorkspaceState {
   version: 1;
   openTabs: WorkspaceTab[];
   activeTabId: string | null;
-  /** Kept for the future split view; Fase 0 only persists the ratio. */
-  split: { orientation: 'horizontal' | 'vertical'; ratio: number };
+  /** Split view: horizontal = side by side, vertical = stacked. */
+  split: { orientation: 'horizontal' | 'vertical'; ratio: number; secondaryTabId: string | null };
   railCollapsed: boolean;
   inspectorOpen: boolean;
   inspectorWidth: number;
@@ -50,7 +50,10 @@ export type WorkspaceAction =
   | { type: 'set-rail'; collapsed: boolean }
   | { type: 'toggle-inspector' }
   | { type: 'set-inspector-width'; width: number }
-  | { type: 'toggle-status-footer' };
+  | { type: 'toggle-status-footer' }
+  | { type: 'set-split-secondary'; id: string | null }
+  | { type: 'set-split-orientation'; orientation: 'horizontal' | 'vertical' }
+  | { type: 'set-split-ratio'; ratio: number };
 
 const STORAGE_KEY = 'karen-workspace-v1';
 const LEGACY_KEY = 'karen-pane-width';
@@ -75,7 +78,7 @@ export function defaultState(): WorkspaceState {
     version: 1,
     openTabs: [createHubTab()],
     activeTabId: 'hub',
-    split: { orientation: 'horizontal', ratio: readLegacyRatio() },
+    split: { orientation: 'horizontal', ratio: readLegacyRatio(), secondaryTabId: null },
     railCollapsed: false,
     inspectorOpen: false,
     inspectorWidth: 320,
@@ -114,6 +117,11 @@ export function loadState(): WorkspaceState {
       split: {
         orientation: split?.orientation === 'vertical' ? 'vertical' : 'horizontal',
         ratio: clamp(split?.ratio, 25, 75, readLegacyRatio()),
+        secondaryTabId:
+          typeof split?.secondaryTabId === 'string' &&
+          openTabs.some((tab) => tab.id === split?.secondaryTabId)
+            ? (split?.secondaryTabId ?? null)
+            : null,
       },
       railCollapsed: Boolean(parsed.railCollapsed),
       inspectorOpen: Boolean(parsed.inspectorOpen),
@@ -161,7 +169,18 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         state.activeTabId === action.id
           ? (openTabs[Math.min(index, openTabs.length - 1)]?.id ?? null)
           : state.activeTabId;
-      return { ...state, openTabs, activeTabId };
+      return {
+        ...state,
+        openTabs,
+        activeTabId,
+        split: {
+          ...state.split,
+          secondaryTabId:
+            state.split.secondaryTabId === action.id || state.split.secondaryTabId === activeTabId
+              ? null
+              : state.split.secondaryTabId,
+        },
+      };
     }
     case 'move-tab': {
       if (action.from === action.to) return state;
@@ -188,6 +207,21 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return { ...state, inspectorWidth: clamp(action.width, 220, 480, 320) };
     case 'toggle-status-footer':
       return { ...state, statusFooterOpen: !state.statusFooterOpen };
+    case 'set-split-secondary':
+      return {
+        ...state,
+        split: { ...state.split, secondaryTabId: action.id },
+      };
+    case 'set-split-orientation':
+      return {
+        ...state,
+        split: { ...state.split, orientation: action.orientation },
+      };
+    case 'set-split-ratio':
+      return {
+        ...state,
+        split: { ...state.split, ratio: clamp(action.ratio, 25, 75, 50) },
+      };
     default:
       return state;
   }
