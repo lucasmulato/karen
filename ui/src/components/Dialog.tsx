@@ -63,11 +63,11 @@ const Dialog: React.FC<DialogProps> = ({ open, title, onClose, children }) => {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl"
+        className="w-full max-w-md rounded-2xl border border-hud-border bg-hud-panel p-6 shadow-2xl"
       >
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-zinc-100">{title}</h2>
-          <button onClick={onClose} className="rounded-md p-1 text-zinc-500 hover:bg-zinc-800 hover:text-white" title="Fechar">
+          <h2 className="text-base font-semibold text-hud-text">{title}</h2>
+          <button onClick={onClose} className="rounded-md p-1 text-hud-muted hover:bg-hud-raised hover:text-hud-cyan" title="Fechar">
             <X size={18} />
           </button>
         </div>

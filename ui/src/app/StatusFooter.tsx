@@ -12,7 +12,11 @@ const StatusFooter: React.FC = () => {
       <span>workspace v1</span>
       <span>{state.openTabs.length} abas</span>
       <span>ativa: {active?.title ?? 'nenhuma'}</span>
-      <span className="ml-auto">divisão: {Math.round(state.split.ratio)}%</span>
+      <span className="ml-auto">
+        {state.split.secondaryTabId
+          ? `divisão: ${Math.round(state.split.ratio)}%`
+          : 'painel único'}
+      </span>
     </footer>
   );
 };

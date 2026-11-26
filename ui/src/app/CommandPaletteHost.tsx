@@ -124,6 +124,16 @@ const CommandPaletteHost: React.FC = () => {
         icon: Rows2,
         run: toggleSplitOrientation,
       },
+      {
+        id: 'shortcuts',
+        label: 'Ver atalhos do workspace',
+        group: 'Ajuda',
+        icon: PALETTE_ICONS.health,
+        run: () =>
+          toast(
+            '/ ou Ctrl+K paleta · Alt+W fecha aba · Alt+1..9/0 abas · Alt+H/G/C/Q Hub/Grafo/Chat/Fila · Alt+←/→ navega'
+          ),
+      },
     ],
     [
       openTab,

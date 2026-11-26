@@ -64,7 +64,7 @@ const TopBar: React.FC = () => {
           onClick={() => (splitActive ? closeSplit() : splitWith())}
           aria-pressed={splitActive}
           title={splitActive ? 'Fechar divisão' : 'Dividir aba atual'}
-          className={`rounded p-1.5 transition-colors ${
+          className={`hidden rounded p-1.5 transition-colors md:inline-flex ${
             splitActive ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:text-hud-cyan'
           }`}
         >
@@ -75,7 +75,7 @@ const TopBar: React.FC = () => {
             type="button"
             onClick={toggleSplitOrientation}
             title="Alternar divisão horizontal / vertical"
-            className="rounded p-1.5 text-hud-muted transition-colors hover:text-hud-cyan"
+            className="hidden rounded p-1.5 text-hud-muted transition-colors hover:text-hud-cyan md:inline-flex"
           >
             <Rows2 size={15} />
           </button>
@@ -85,7 +85,7 @@ const TopBar: React.FC = () => {
           onClick={toggleContrast}
           aria-pressed={highContrast}
           title="Alternar alto contraste"
-          className={`rounded p-1.5 transition-colors ${
+          className={`hidden rounded p-1.5 transition-colors sm:inline-flex ${
             highContrast ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:text-hud-cyan'
           }`}
         >
@@ -107,7 +107,7 @@ const TopBar: React.FC = () => {
           onClick={toggleStatusFooter}
           aria-pressed={state.statusFooterOpen}
           title="Alternar rodapé de contexto"
-          className={`rounded p-1.5 transition-colors ${
+          className={`hidden rounded p-1.5 transition-colors md:inline-flex ${
             state.statusFooterOpen ? 'bg-hud-raised text-hud-cyan' : 'text-hud-muted hover:text-hud-cyan'
           }`}
         >

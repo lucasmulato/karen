@@ -55,6 +55,21 @@ const Shell: React.FC = () => {
         if (tab) focusTab(tab.id);
         return;
       }
+      if (event.key === '0') {
+        event.preventDefault();
+        const tab = state.openTabs[state.openTabs.length - 1];
+        if (tab) focusTab(tab.id);
+        return;
+      }
+      const shortcut: Record<string, string> = { h: 'hub', g: 'graph', c: 'chat', q: 'queue' };
+      const targetKind = shortcut[event.key.toLowerCase()];
+      if (targetKind) {
+        event.preventDefault();
+        const existing = state.openTabs.find((tab) => tab.kind === targetKind);
+        if (existing) focusTab(existing.id);
+        else openTab(targetKind as 'hub' | 'graph' | 'chat' | 'queue');
+        return;
+      }
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
         event.preventDefault();
         const index = state.openTabs.findIndex((tab) => tab.id === state.activeTabId);
@@ -64,7 +79,7 @@ const Shell: React.FC = () => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [state.openTabs, state.activeTabId, setPaletteOpen, focusTab, closeTab]);
+  }, [state.openTabs, state.activeTabId, setPaletteOpen, focusTab, closeTab, openTab]);
 
   return (
     <div

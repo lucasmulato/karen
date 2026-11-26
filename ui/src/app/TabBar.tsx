@@ -35,7 +35,7 @@ const TAB_ICONS: Partial<Record<TabKind, LucideIcon>> = {
 };
 
 const TabBar: React.FC = () => {
-  const { state, focusTab, closeTab, moveTab, togglePin } = useWorkspace();
+  const { state, attention, focusTab, closeTab, moveTab, togglePin } = useWorkspace();
   const dragFrom = useRef<number | null>(null);
   const buttons = useRef<Record<string, HTMLElement | null>>({});
 
@@ -52,6 +52,7 @@ const TabBar: React.FC = () => {
     >
       {state.openTabs.map((tab, index) => {
         const active = tab.id === state.activeTabId;
+        const pending = tab.kind === 'queue' && attention.length > 0 && !active;
         const Icon = TAB_ICONS[tab.kind] ?? FileText;
         return (
           <div
@@ -90,7 +91,9 @@ const TabBar: React.FC = () => {
             className={`group flex min-w-[110px] max-w-[220px] shrink-0 cursor-pointer items-center gap-1.5 border-b-2 px-2 text-[11px] transition-colors ${
               active
                 ? 'border-hud-cyan bg-hud-raised text-hud-text'
-                : 'border-transparent text-hud-muted hover:text-hud-text'
+                : pending
+                  ? 'border-transparent text-hud-warning hover:text-hud-text'
+                  : 'border-transparent text-hud-muted hover:text-hud-text'
             }`}
           >
             <Icon size={13} className={active ? 'text-hud-cyan' : ''} />

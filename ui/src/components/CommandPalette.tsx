@@ -97,44 +97,55 @@ const CommandPalette: React.FC<Props> = ({ open, onClose, actions, onSearch }) =
         aria-label="Paleta de comandos"
         className="w-full max-w-xl overflow-hidden rounded-xl border border-hud-cyan/30 bg-hud-panel shadow-[0_0_60px_rgba(34,211,238,.12)]"
       >
-        <div className="flex items-center gap-3 border-b border-cyan-950 px-4 py-3">
-          <Search size={16} className="text-cyan-500" />
+        <div className="flex items-center gap-3 border-b border-hud-border px-4 py-3">
+          <Search size={16} className="text-hud-cyan" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Digite um comando... (/ para focar)"
-            className="flex-1 bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
+            placeholder="Abra uma aba, encontre algo ou execute uma ação..."
+            className="flex-1 bg-transparent text-sm text-hud-text outline-none placeholder:text-hud-muted"
           />
-          <kbd className="rounded border border-zinc-700 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500">ESC</kbd>
+          <kbd className="rounded border border-hud-border px-1.5 py-0.5 font-mono text-[10px] text-hud-muted">ESC</kbd>
         </div>
-        <div className="max-h-[50vh] overflow-y-auto p-2">
-          <p className="px-2 pb-1 font-mono text-[10px] uppercase tracking-widest text-cyan-700">
+        <div className="max-h-[50vh] overflow-y-auto p-2 hud-scroll">
+          <p className="hud-label px-2 pb-1">
             {searching ? 'buscando...' : `${filtered.length} ação(ões) disponível(is)`}
           </p>
           {filtered.map((action, index) => {
             const Icon = action.icon;
+            const newGroup = index === 0 || filtered[index - 1]?.group !== action.group;
             return (
-              <button
-                key={action.id}
-                onMouseEnter={() => setActive(index)}
-                onClick={() => void choose(action)}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
-                  index === active ? 'bg-hud-cyan/10 text-hud-cyan' : 'text-zinc-300 hover:bg-zinc-900'
-                }`}
-              >
-                <Icon size={15} className="shrink-0 text-cyan-600" />
-                <span className="min-w-0 flex-1 truncate text-xs">{action.label}</span>
-                {action.group && <span className="hud-badge shrink-0">{action.group}</span>}
-                {action.hint && <span className="shrink-0 font-mono text-[10px] text-zinc-600">{action.hint}</span>}
-              </button>
+              <React.Fragment key={action.id}>
+                {newGroup && action.group && (
+                  <p className="hud-label px-3 pb-1 pt-2">{action.group}</p>
+                )}
+                <button
+                  onMouseEnter={() => setActive(index)}
+                  onClick={() => void choose(action)}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
+                    index === active
+                      ? 'bg-hud-cyan/10 text-hud-cyan'
+                      : 'text-hud-text hover:bg-hud-raised'
+                  }`}
+                >
+                  <Icon size={15} className="shrink-0 text-hud-cyan-dim" />
+                  <span className="min-w-0 flex-1 truncate text-xs">{action.label}</span>
+                  {action.hint && (
+                    <span className="shrink-0 font-mono text-[10px] text-hud-muted">{action.hint}</span>
+                  )}
+                </button>
+              </React.Fragment>
             );
           })}
           {filtered.length === 0 && (
-            <p className="px-3 py-4 text-xs text-zinc-600">Nenhum comando corresponde.</p>
+            <p className="px-3 py-4 text-xs text-hud-muted">Nenhum comando corresponde.</p>
           )}
         </div>
+        <p className="border-t border-hud-border px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-hud-muted">
+          ↑↓ navegar · Enter abrir · Esc fechar
+        </p>
       </div>
     </div>,
     document.body
