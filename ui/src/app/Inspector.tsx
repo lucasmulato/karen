@@ -1,9 +1,11 @@
 import React, { useRef } from 'react';
-import { X } from 'lucide-react';
+import { FileText, Network, X } from 'lucide-react';
+import { useGraph } from './providers/graphContext';
 import { useWorkspace } from './providers/workspaceContext';
 
 const Inspector: React.FC = () => {
-  const { state, dispatch, toggleInspector } = useWorkspace();
+  const { state, dispatch, toggleInspector, selection, openTab } = useWorkspace();
+  const { selectedNode } = useGraph();
   const dragStart = useRef<{ x: number; width: number } | null>(null);
 
   if (!state.inspectorOpen) return null;
@@ -57,10 +59,57 @@ const Inspector: React.FC = () => {
           <X size={14} />
         </button>
       </div>
-      <div className="flex flex-1 items-center justify-center p-4 text-center">
-        <p className="text-xs leading-relaxed text-hud-muted">
-          Selecione um nó, nota, lead ou item da fila para ver o contexto aqui.
-        </p>
+
+      <div className="hud-scroll min-h-0 flex-1 overflow-auto p-3">
+        {selectedNode ? (
+          <div className="space-y-3">
+            <div className="hud-card">
+              <span className="hud-badge">{selectedNode.type}</span>
+              <h2 className="mt-2 break-words text-base text-hud-text">{selectedNode.name}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-hud-muted">
+                {selectedNode.description || 'Sem descrição.'}
+              </p>
+            </div>
+            <dl className="space-y-2 text-[11px]">
+              <div>
+                <dt className="hud-label">ID</dt>
+                <dd className="break-all font-mono text-hud-text">{selectedNode.id}</dd>
+              </div>
+              <div>
+                <dt className="hud-label">Criado</dt>
+                <dd className="text-hud-text">
+                  {selectedNode.created_at
+                    ? new Date(selectedNode.created_at).toLocaleDateString()
+                    : '—'}
+                </dd>
+              </div>
+            </dl>
+            <button
+              type="button"
+              onClick={() => openTab('graph')}
+              className="hud-btn w-full justify-center"
+            >
+              <Network size={12} /> Focar no grafo
+            </button>
+          </div>
+        ) : selection?.kind === 'note' ? (
+          <div className="hud-card space-y-2">
+            <FileText size={16} className="text-hud-cyan" />
+            <p className="hud-label">Nota selecionada</p>
+            <p className="break-all font-mono text-[11px] text-hud-text">{selection.path}</p>
+            <button
+              type="button"
+              onClick={() => openTab('note', { payload: selection.path })}
+              className="hud-btn w-full justify-center"
+            >
+              Abrir nota
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs leading-relaxed text-hud-muted">
+            Selecione um nó, nota, lead ou item da fila para ver o contexto aqui.
+          </p>
+        )}
       </div>
     </aside>
   );

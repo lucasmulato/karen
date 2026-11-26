@@ -1,20 +1,17 @@
 import React from 'react';
-import { FileQuestion, NotebookPen } from 'lucide-react';
-import App from '../App';
+import { NotebookPen } from 'lucide-react';
+import SplitPane from './SplitPane';
+import TabView from './TabView';
 import { useWorkspace } from './providers/workspaceContext';
 
-/**
- * Fase 0: the single Hub tab hosts the unchanged legacy App, so no feature is
- * lost while the shell is being built. Fase 1 replaces it with the real tabs.
- */
 const TabContent: React.FC = () => {
-  const { state, openTab } = useWorkspace();
+  const { state, openTab, dispatch } = useWorkspace();
   const active = state.openTabs.find((tab) => tab.id === state.activeTabId);
 
   if (!active) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <FileQuestion size={28} className="text-hud-muted" />
+        <NotebookPen size={28} className="text-hud-muted" />
         <p className="text-sm text-hud-muted">Nenhuma aba aberta.</p>
         <button
           type="button"
@@ -27,29 +24,25 @@ const TabContent: React.FC = () => {
     );
   }
 
-  if (active.kind === 'hub') {
+  const secondary = state.openTabs.find(
+    (tab) => tab.id === state.split.secondaryTabId && tab.id !== active.id
+  );
+
+  if (secondary) {
     return (
-      <div className="h-full w-full" role="tabpanel" aria-label={active.title}>
-        <App embedded />
-      </div>
+      <SplitPane
+        first={<TabView tab={active} />}
+        second={<TabView tab={secondary} />}
+        orientation={state.split.orientation}
+        ratio={state.split.ratio}
+        onRatioChange={(ratio) => dispatch({ type: 'set-split-ratio', ratio })}
+      />
     );
   }
 
   return (
-    <div
-      className="flex h-full flex-col items-center justify-center gap-3 text-center"
-      role="tabpanel"
-      aria-label={active.title}
-    >
-      <FileQuestion size={28} className="text-hud-muted" />
-      <p className="text-sm text-hud-text">Aba “{active.title}”</p>
-      <p className="max-w-sm text-xs text-hud-muted">
-        A migração desta superfície está prevista para as fases seguintes. Nada foi removido: a
-        interface clássica continua disponível.
-      </p>
-      <button type="button" onClick={() => openTab('hub')} className="hud-btn">
-        Voltar ao Hub
-      </button>
+    <div role="tabpanel" aria-label={active.title} className="h-full w-full">
+      <TabView tab={active} />
     </div>
   );
 };
