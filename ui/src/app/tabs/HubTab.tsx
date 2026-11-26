@@ -1,25 +1,23 @@
 import React from 'react';
+import { useWorkspace } from '../providers/workspaceContext';
+import { NOTES_TAB_TO_KIND } from './noteNavigation';
 
 const NotesPanel = React.lazy(() => import('../../components/NotesPanel'));
 
-const HubTab: React.FC = () => (
-  <div className="flex h-full w-full flex-col bg-hud-bg">
-    <div className="hud-tabbar">
-      <span className="hud-label">Hub · second brain</span>
-      <span className="hud-label ml-auto text-[9px]">vault local · markdown</span>
-    </div>
-    <div className="min-h-0 flex-1 overflow-hidden">
-      <React.Suspense
-        fallback={
-          <div className="flex h-full items-center justify-center gap-2 text-xs text-hud-muted">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-hud-cyan" /> Carregando notas...
-          </div>
-        }
-      >
-        <NotesPanel />
+const HubTab: React.FC = () => {
+  const { openNote, openTab } = useWorkspace();
+  return (
+    <div className="h-full w-full">
+      <React.Suspense fallback={<p className="p-4 text-xs text-hud-muted">Carregando notas...</p>}>
+        <NotesPanel
+          initialTab="hub"
+          hideTabs
+          onOpenNote={openNote}
+          onOpenTab={(tab) => openTab(NOTES_TAB_TO_KIND[tab])}
+        />
       </React.Suspense>
     </div>
-  </div>
-);
+  );
+};
 
 export default HubTab;

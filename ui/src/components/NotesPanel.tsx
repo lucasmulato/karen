@@ -27,7 +27,20 @@ interface GardenData {
 }
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
-type Tab = 'hub' | 'files' | 'mapa' | 'projetos' | 'garden' | 'canvas';
+export type NotesTab = 'hub' | 'files' | 'mapa' | 'projetos' | 'garden' | 'canvas';
+
+interface NotesPanelProps {
+  /** Controlled mode: start on a specific inner surface. */
+  initialTab?: NotesTab;
+  /** Controlled mode: load this note. */
+  selectedPath?: string;
+  /** Controlled mode: delegate note opens to the workspace tab store. */
+  onOpenNote?: (path: string) => void;
+  /** Controlled mode: delegate inner navigation to the workspace tab store. */
+  onOpenTab?: (tab: NotesTab) => void;
+  /** Controlled mode: hide the panel's own tab strip (the shell owns it). */
+  hideTabs?: boolean;
+}
 
 interface NoteMeta {
   type: string;
@@ -111,8 +124,14 @@ function withFrontmatter(content: string, meta: NoteMeta): string {
 
 const NOTE_TYPES = ['inbox', 'project', 'area', 'resource', 'archive', 'memory', 'note', 'finding', 'technique', 'cve', 'tool', 'writeup', 'target', 'fix'];
 
-const NotesPanel: React.FC = () => {
-  const [tab, setTab] = useState<Tab>('hub');
+const NotesPanel: React.FC<NotesPanelProps> = ({
+  initialTab = 'hub',
+  selectedPath,
+  onOpenNote,
+  onOpenTab,
+  hideTabs = false,
+}) => {
+  const [tab, setTab] = useState<NotesTab>(initialTab);
   const [files, setFiles] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [content, setContent] = useState('');
@@ -132,6 +151,16 @@ const NotesPanel: React.FC = () => {
   const [backlinks, setBacklinks] = useState<NoteNode[]>([]);
   const [linkPicker, setLinkPicker] = useState<{ prefix: string; typing: boolean } | null>(null);
   const [meta, setMeta] = useState<NoteMeta>({ type: 'note', tags: [], maturity: 'seedling', graphId: '' });
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    if (selectedPath && selectedPath !== selected) void openFile(selectedPath);
+    // openFile is a hoisted function declaration inside this component.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPath]);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -195,7 +224,8 @@ const NotesPanel: React.FC = () => {
       setContent(data.content ?? '');
       setMeta(parseMeta(data.content ?? ''));
       setDirty(false);
-      setTab('files');
+      if (onOpenNote && selectedPath !== path) onOpenNote(path);
+      else setTab('files');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -286,7 +316,11 @@ const NotesPanel: React.FC = () => {
     }
   }
 
-  function changeTab(next: Tab) {
+  function changeTab(next: NotesTab) {
+    if (onOpenTab && next !== initialTab) {
+      onOpenTab(next);
+      return;
+    }
     setTab(next);
     setError('');
     if (next === 'garden' && !garden) loadGarden();
@@ -384,6 +418,7 @@ const NotesPanel: React.FC = () => {
   return (
     <div data-color-mode="dark" className="flex h-full w-full flex-col bg-hud-panel text-slate-200">
       <div className="flex shrink-0 items-center justify-between border-b border-hud-line px-4 py-2">
+        {!hideTabs && (
         <div className="flex gap-1">
           <button
             onClick={() => changeTab('hub')}
@@ -422,6 +457,7 @@ const NotesPanel: React.FC = () => {
             <Network size={14} /> Canvas
           </button>
         </div>
+        )}
         <div className="flex items-center gap-2">
           {tab === 'files' && selected && (
             <div className="flex overflow-hidden rounded-lg border border-hud-line">
@@ -731,7 +767,7 @@ const NotesPanel: React.FC = () => {
                     {meta.tags.map((t) => (
                       <button
                         key={t}
-                        onClick={() => { setTagFilter(t); setTab('hub'); }}
+                        onClick={() => { setTagFilter(t); changeTab('hub'); }}
                         className="rounded-full border border-hud-ok px-2 py-0.5 text-[10px] text-hud-ok hover:border-hud-ok"
                         title={`Filtrar Hub por #${t}`}
                       >
