@@ -1,5 +1,5 @@
 /* KAREN shell cache. API calls are never cached. */
-const CACHE = "karen-shell-v2";
+const CACHE = "karen-shell-v3";
 const SHELL = ["/app/", "/app/index.html", "/app/favicon.svg", "/app/icons.svg"];
 
 self.addEventListener("install", (event) => {

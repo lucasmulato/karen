@@ -113,9 +113,6 @@ const TopBar: React.FC = () => {
         >
           <PanelBottom size={15} />
         </button>
-        <a href={`${window.location.pathname}?classic=1`} className="hud-btn ml-1" title="Abrir interface clássica">
-          Clássico
-        </a>
       </div>
     </header>
   );
