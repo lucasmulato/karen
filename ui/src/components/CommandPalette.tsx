@@ -6,6 +6,7 @@ export interface PaletteAction {
   id: string;
   label: string;
   hint?: string;
+  group?: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   run: () => void | Promise<void>;
 }
@@ -14,26 +15,60 @@ interface Props {
   open: boolean;
   onClose: () => void;
   actions: PaletteAction[];
+  /** Optional async Finder results (notes, nodes, queue items...). */
+  onSearch?: (query: string) => Promise<PaletteAction[]>;
 }
 
-const CommandPalette: React.FC<Props> = ({ open, onClose, actions }) => {
+const CommandPalette: React.FC<Props> = ({ open, onClose, actions, onSearch }) => {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
+  const [dynamic, setDynamic] = useState<PaletteAction[]>([]);
+  const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) { setQuery(''); setActive(0); setTimeout(() => inputRef.current?.focus(), 0); }
   }, [open]);
 
+  useEffect(() => {
+    if (!open || !onSearch || query.trim().length < 2) {
+      setDynamic([]);
+      setSearching(false);
+      return;
+    }
+    let current = true;
+    setSearching(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const results = await onSearch(query.trim());
+        if (current) setDynamic(results);
+      } catch {
+        if (current) setDynamic([]);
+      } finally {
+        if (current) setSearching(false);
+      }
+    }, 220);
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [query, open, onSearch]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return actions;
-    return actions.filter((a) =>
-      `${a.label} ${a.hint ?? ''}`.toLowerCase().includes(q)
-    );
-  }, [query, actions]);
+    const statics = q
+      ? actions.filter((a) => `${a.label} ${a.hint ?? ''}`.toLowerCase().includes(q))
+      : actions;
+    return [...statics, ...dynamic];
+  }, [query, actions, dynamic]);
 
-  useEffect(() => setActive(0), [query]);
+  useEffect(() => {
+    setActive(0);
+  }, [query]);
+
+  useEffect(() => {
+    if (active >= filtered.length) setActive(0);
+  }, [active, filtered.length]);
 
   if (!open) return null;
 
@@ -43,6 +78,7 @@ const CommandPalette: React.FC<Props> = ({ open, onClose, actions }) => {
   }
 
   function onKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Tab') { e.preventDefault(); return; }
     if (e.key === 'Escape') { e.preventDefault(); onClose(); }
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(a + 1, filtered.length - 1)); }
     if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
@@ -75,7 +111,7 @@ const CommandPalette: React.FC<Props> = ({ open, onClose, actions }) => {
         </div>
         <div className="max-h-[50vh] overflow-y-auto p-2">
           <p className="px-2 pb-1 font-mono text-[10px] uppercase tracking-widest text-cyan-700">
-            {filtered.length} ação(ões) disponível(is)
+            {searching ? 'buscando...' : `${filtered.length} ação(ões) disponível(is)`}
           </p>
           {filtered.map((action, index) => {
             const Icon = action.icon;
@@ -90,6 +126,7 @@ const CommandPalette: React.FC<Props> = ({ open, onClose, actions }) => {
               >
                 <Icon size={15} className="shrink-0 text-cyan-600" />
                 <span className="min-w-0 flex-1 truncate text-xs">{action.label}</span>
+                {action.group && <span className="hud-badge shrink-0">{action.group}</span>}
                 {action.hint && <span className="shrink-0 font-mono text-[10px] text-zinc-600">{action.hint}</span>}
               </button>
             );
