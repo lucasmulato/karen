@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import MDEditor from '@uiw/react-md-editor';
 import CanvasView from './CanvasView';
 import MarkdownRead from './MarkdownRead';
 import GraphView, { type GraphData } from './GraphView';
-import '@uiw/react-md-editor/markdown-editor.css';
-import '@uiw/react-markdown-preview/markdown.css';
 import { Briefcase, Eye, FileText, FolderOpen, Home, Leaf, Link2, Network, Pencil, Save, Share2 } from 'lucide-react';
 import { toast } from '../toast';
 import ActivityFeed from './ActivityFeed';
+
+const MarkdownEditor = React.lazy(() => import('./MarkdownEditor'));
 
 interface GardenNote {
   id: string;
@@ -695,20 +694,21 @@ const NotesPanel: React.FC<NotesPanelProps> = ({
                       </button>
                     </div>
                     <div className="min-h-0 flex-1">
-                      <MDEditor
-                        value={content}
-                        onChange={(v) => {
-                          const next = v ?? '';
-                          setContent(next);
-                          setDirty(true);
-                          const match = next.match(/\[\[([^\]]*)$/);
-                          if (match) setLinkPicker({ prefix: match[1], typing: true });
-                          else setLinkPicker(null);
-                        }}
-                        height="100%"
-                        visibleDragbar={false}
-                        textareaProps={{ spellCheck: false }}
-                      />
+                      <React.Suspense
+                        fallback={<p className="p-4 text-xs text-hud-muted">Carregando editor...</p>}
+                      >
+                        <MarkdownEditor
+                          value={content}
+                          onChange={(v) => {
+                            const next = v ?? '';
+                            setContent(next);
+                            setDirty(true);
+                            const match = next.match(/\[\[([^\]]*)$/);
+                            if (match) setLinkPicker({ prefix: match[1], typing: true });
+                            else setLinkPicker(null);
+                          }}
+                        />
+                      </React.Suspense>
                     </div>
                     {linkPicker && (
                       <div className="shrink-0 border-t border-hud-line bg-hud-bg p-2">
