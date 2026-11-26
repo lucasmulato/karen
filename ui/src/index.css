@@ -12,6 +12,9 @@
   --color-hud-warn: #fbbf24;
   --color-hud-danger: #fb7185;
   --color-hud-muted: #64748b;
+  --color-hud-text: #e2e8f0;
+  --color-hud-success: #34d399;
+  --color-hud-warning: #fbbf24;
   --color-focus: #22d3ee;
   --font-hud-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --radius-panel: 0.75rem;
@@ -22,6 +25,20 @@
   color: #e2e8f0;
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
+
+  /* Semantic aliases used by the workspace shell; the original --color-hud-*
+     tokens remain intact so existing components keep working. */
+  --hud-bg: var(--color-hud-bg);
+  --hud-panel: var(--color-hud-panel);
+  --hud-raised: var(--color-hud-raised);
+  --hud-border: var(--color-hud-line);
+  --hud-cyan: var(--color-hud-cyan);
+  --hud-cyan-dim: rgba(34, 211, 238, 0.45);
+  --hud-text: var(--color-hud-text);
+  --hud-muted: var(--color-hud-muted);
+  --hud-success: var(--color-hud-success);
+  --hud-warning: var(--color-hud-warning);
+  --hud-danger: var(--color-hud-danger);
 }
 
 body { margin: 0; }

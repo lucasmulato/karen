@@ -68,7 +68,7 @@ const EDGE_LABELS: EdgeLabel[] = [
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
-const App: React.FC = () => {
+const App: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const [data, setData] = useState<GraphData | null>(null);
   const [selectedNode, setSelectedNode] = useState<NodeRow | null>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -452,7 +452,7 @@ const App: React.FC = () => {
         : 'Conectar: clique no nó de destino';
 
   return (
-    <div className="flex h-screen w-full bg-hud-bg text-slate-200 font-sans overflow-hidden">
+    <div className={`flex w-full bg-hud-bg text-slate-200 font-sans overflow-hidden ${embedded ? 'h-full' : 'h-screen'}`}>
       {/* Navigation Sidebar */}
       {/* Quiet-HUD hover zone: the rail appears only on pointer approach. */}
       <div
