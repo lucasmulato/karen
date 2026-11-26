@@ -3,6 +3,7 @@ import { NotebookPen } from 'lucide-react';
 import SplitPane from './SplitPane';
 import TabView from './TabView';
 import { useWorkspace } from './providers/workspaceContext';
+import { EmptyState } from './ui/Skeleton';
 
 const TabContent: React.FC = () => {
   const { state, openTab, dispatch } = useWorkspace();
@@ -10,17 +11,20 @@ const TabContent: React.FC = () => {
 
   if (!active) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <NotebookPen size={28} className="text-hud-muted" />
-        <p className="text-sm text-hud-muted">Nenhuma aba aberta.</p>
-        <button
-          type="button"
-          onClick={() => openTab('hub')}
-          className="hud-btn-primary inline-flex items-center gap-1.5"
-        >
-          <NotebookPen size={13} /> Reabrir Hub
-        </button>
-      </div>
+      <EmptyState
+        icon={<NotebookPen size={28} />}
+        title="Nenhuma aba aberta."
+        hint="O workspace fecha tudo, mas o layout e as preferências ficam salvos."
+        action={
+          <button
+            type="button"
+            onClick={() => openTab('hub')}
+            className="hud-btn-primary inline-flex items-center gap-1.5"
+          >
+            <NotebookPen size={13} /> Reabrir Hub
+          </button>
+        }
+      />
     );
   }
 
@@ -31,8 +35,16 @@ const TabContent: React.FC = () => {
   if (secondary) {
     return (
       <SplitPane
-        first={<TabView tab={active} />}
-        second={<TabView tab={secondary} />}
+        first={
+          <div id={`panel-${active.id}`} role="tabpanel" aria-labelledby={`tab-${active.id}`} className="h-full">
+            <TabView tab={active} />
+          </div>
+        }
+        second={
+          <div id={`panel-${secondary.id}`} role="tabpanel" aria-labelledby={`tab-${secondary.id}`} className="h-full">
+            <TabView tab={secondary} />
+          </div>
+        }
         orientation={state.split.orientation}
         ratio={state.split.ratio}
         onRatioChange={(ratio) => dispatch({ type: 'set-split-ratio', ratio })}
@@ -41,7 +53,12 @@ const TabContent: React.FC = () => {
   }
 
   return (
-    <div role="tabpanel" aria-label={active.title} className="h-full w-full">
+    <div
+      id={`panel-${active.id}`}
+      role="tabpanel"
+      aria-labelledby={`tab-${active.id}`}
+      className="h-full w-full"
+    >
       <TabView tab={active} />
     </div>
   );

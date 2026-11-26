@@ -8,6 +8,7 @@ import { useGraph } from '../providers/graphContext';
 import { EDGE_LABELS } from '../providers/graphContext';
 import type { EdgeLabel } from '../providers/graphContext';
 import { useWorkspace } from '../providers/workspaceContext';
+import { Skeleton } from '../ui/Skeleton';
 
 const NODE_TYPES = [
   'idea', 'project', 'task', 'label', 'note', 'finding', 'technique',
@@ -124,8 +125,13 @@ const GraphTab: React.FC = () => {
 
       <div className="relative min-h-0 flex-1">
         {graph.loading && !graph.data ? (
-          <div className="flex h-full items-center justify-center gap-2 text-xs text-hud-muted">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-hud-cyan" /> Carregando grafo...
+          <div className="space-y-3 p-6" role="status" aria-label="Carregando grafo">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-3 w-72" />
+            <div className="grid grid-cols-2 gap-3 pt-4">
+              <Skeleton className="h-28 w-full" />
+              <Skeleton className="h-28 w-full" />
+            </div>
           </div>
         ) : graph.error ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">

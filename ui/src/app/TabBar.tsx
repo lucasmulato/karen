@@ -56,8 +56,10 @@ const TabBar: React.FC = () => {
         return (
           <div
             key={tab.id}
+            id={`tab-${tab.id}`}
             role="tab"
             aria-selected={active}
+            aria-controls={`panel-${tab.id}`}
             data-tab-id={tab.id}
             tabIndex={active ? 0 : -1}
             draggable
