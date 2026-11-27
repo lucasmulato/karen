@@ -28,7 +28,7 @@ protocol — redação exata do LLM-SEC, sem aumentar o claim.
 | Data | Marco | Artefato público |
 |---|---|---|
 | 2026-12-15 | Baseline de utilidade e trava de patches publicadas | testes no PAI |
-| 2027-01-31 | Política gerada validada contra o SAFE-AI em CI | teste entre repos |
+| 2027-01-31 | Política gerada validada contra o SAFE-AI em CI | **Antecipado em 27/11/2026**: `SAFE-AI/app/policy_adapter.py`, `tests/test_generated_policy.py`, `.github/workflows/ci.yml` (11/11 testes locais ok) |
 | 2027-03-31 | Primeira medição de resistência com suíte adversarial | relatório com dados brutos |
 
 `S` (resistência) hoje é **não medido**. Nenhum número de benchmark é afirmado.
