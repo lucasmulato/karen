@@ -13,6 +13,9 @@ import { connect as tlsConnect } from "node:tls";
 const run = promisify(execFile);
 const ACTIONS = resolve("/home/admin/karen/api/data/action-items.json");
 const BACKUP_DIR = resolve(process.env.KAREN_BACKUP_DIR || "/home/admin/backups/karen");
+const OFFSITE_DIR = resolve(process.env.KAREN_OFFSITE_DIR || "/home/admin/backups/karen-offsite");
+const MAX_DUMP_MB = 60;
+const MAX_OFFSITE_GB = 2;
 const HOST = process.env.KAREN_PUBLIC_HOST || null;
 
 function item(topic, title, steps, severity = "urgent") {
@@ -23,7 +26,7 @@ async function main() {
   const items = [];
 
   // 1. systemd units
-  for (const unit of ["karen-api.service", "karen-llama.service", "karen-morning.timer", "karen-evening.timer", "karen-backup.timer", "karen-audit.timer"]) {
+  for (const unit of ["karen-api.service", "karen-llama.service", "karen-morning.timer", "karen-evening.timer", "karen-backup.timer", "karen-offsite.timer", "karen-offsite-restore.timer", "karen-audit.timer"]) {
     try {
       const { stdout } = await run("systemctl", ["is-active", unit]);
       if (stdout.trim() !== "active") {
@@ -57,6 +60,51 @@ async function main() {
       "Rodar: sudo systemctl start karen-backup.service",
     ]));
   }
+
+  // 2b. dump size: GitHub blocks single files above 100 MB. Warn earlier.
+  try {
+    const files = (await readdir(BACKUP_DIR)).filter(
+      (f) => f.startsWith("db-") && f.endsWith(".sql.gz")
+    ).sort();
+    const latest = files[files.length - 1];
+    if (latest) {
+      const { size } = await stat(resolve(BACKUP_DIR, latest));
+      const mb = size / 1_048_576;
+      if (mb > MAX_DUMP_MB) {
+        items.push(item("watchdog:dump-size", `Dump com ${mb.toFixed(0)} MB`, [
+          "GitHub bloqueia arquivos acima de 100 MB por objeto.",
+          "Revisar o crescimento do Postgres e considerar split por tabela.",
+        ]));
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 2c. offsite repo size and freshness
+  try {
+    const { stdout } = await run("du", ["-sk", resolve(OFFSITE_DIR, ".git")]);
+    const mb = Number(stdout.trim().split(/\s+/)[0]) / 1024;
+    if (Number.isFinite(mb) && mb > MAX_OFFSITE_GB * 1024) {
+      items.push(item("watchdog:offsite-size", `Repo de offsite com ${mb.toFixed(0)} MB`, [
+        "Verificar retenção em api/scripts/offsite-backup.mjs (KEEP=30).",
+        "Confirmar compactação do histórico no último push.",
+      ]));
+    }
+  } catch { /* ignore */ }
+
+  try {
+    const files = (await readdir(OFFSITE_DIR)).filter((f) => f.endsWith(".enc"));
+    const stamps = await Promise.all(
+      files.map((f) => stat(resolve(OFFSITE_DIR, f)).then((s) => s.mtimeMs).catch(() => 0))
+    );
+    const newest = stamps.length ? Math.max(...stamps) : 0;
+    const hours = (Date.now() - newest) / 3_600_000;
+    if (!newest || hours > 48) {
+      items.push(item("watchdog:offsite-stale", `Offsite sem push há ${newest ? Math.round(hours) : "?"}h`, [
+        "Verificar karen-offsite.timer e journalctl -u karen-offsite.service",
+        "Rodar: sudo systemctl start karen-offsite.service",
+      ]));
+    }
+  } catch { /* ignore */ }
 
   // 3. disk usage
   try {
