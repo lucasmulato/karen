@@ -14,7 +14,7 @@ const LOCAL = resolve(process.env.KAREN_BACKUP_DIR || "/home/admin/backups/karen
 const OFFSITE = resolve(process.env.KAREN_OFFSITE_DIR || "/home/admin/backups/karen-offsite");
 const REPO = process.env.KAREN_OFFSITE_REPO || "git@github.com:lucasmulato/karen-backups.git";
 const PASSPHRASE = process.env.KAREN_BACKUP_PASSPHRASE;
-const KEEP = 7;
+const KEEP = 30;
 
 async function exists(p) {
   try { await access(p); return true; } catch { return false; }
@@ -57,19 +57,27 @@ async function main() {
 
   const entries = await readdir(OFFSITE);
   const files = entries.filter((f) => /^\d{4}-\d{2}-\d{2}-(db|vault)\..*\.enc$/.test(f)).sort();
-  for (const old of files.slice(0, Math.max(0, files.length - KEEP * 2))) {
+  const expired = files.slice(0, Math.max(0, files.length - KEEP * 2));
+  for (const old of expired) {
     await unlink(join(OFFSITE, old));
   }
+  const retained = files.length - expired.length;
+  console.log(
+    `Retidos: ${retained / 2} pares (${retained} arquivos, KEEP=${KEEP}).`
+  );
 
+  // The salted ciphertexts never deduplicate, so plain commits would make the
+  // repo grow forever even after files are deleted. Rebuild a single root
+  // commit from the retained working tree and force-push it instead.
+  const compactBranch = `compact-${stamp}-${Date.now()}`;
+  await git(["checkout", "--orphan", compactBranch]);
   await git(["add", "-A"]);
-  const status = await git(["status", "--porcelain"]);
-  if (status) {
-    await git(["commit", "-m", `offsite backup ${stamp}`]);
-    await git(["push", "origin", "HEAD"]);
-    console.log("Offsite backup pushed.");
-  } else {
-    console.log("Offsite backup already up to date.");
-  }
+  await git(["commit", "-m", `offsite backup ${stamp}`]);
+  await git(["branch", "-M", "main"]);
+  await git(["push", "--force-with-lease", "origin", "main"]);
+  await git(["reflog", "expire", "--expire=now", "--all"]);
+  await git(["gc", "--prune=now"]);
+  console.log("Offsite backup pushed e histórico compactado.");
 }
 
 main().catch((err) => {
